@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/manrope";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: "Manrope Variable", sans-serif;
+  --font-sans: "Inter Variable", sans-serif;
+  --font-mono: "JetBrains Mono Variable", monospace;
+  --color-background: #f8f9fb;
+  --color-foreground: #0f172a;
+  --color-border: #e2e8f0;
+  --color-ring: #e11d48;
+}
+
+@layer base {
+  * { @apply border-slate-200 outline-rose-500/40; }
+  html { font-family: "Inter Variable", sans-serif; }
+  body { @apply bg-[#f8f9fb] text-slate-900 antialiased; margin: 0; }
+  h1, h2, h3, h4, h5, h6 { font-family: "Manrope Variable", sans-serif; }
+  button, a { -webkit-tap-highlight-color: transparent; }
+}

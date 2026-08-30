@@ -1,0 +1,107 @@
+{
+  "theme": {
+    "mode": "light",
+    "description": "Light finance dashboard with clean white surfaces, structural grayscale, and Razorpay red accents for high-priority actions and kinetic elements."
+  },
+  "typography": {
+    "headings": {
+      "family": "Manrope",
+      "weights": ["500", "600", "700"],
+      "usage": "Use Manrope for all headings (H1-H6) to provide a structured, clean, and professional aesthetic. Do not use generic sans for headings."
+    },
+    "body": {
+      "family": "Inter",
+      "weights": ["400", "500", "600"],
+      "usage": "Highly legible standard font for general UI text, descriptions, and standard labels."
+    },
+    "monospace": {
+      "family": "JetBrains Mono",
+      "weights": ["400", "500"],
+      "usage": "CRITICAL: Use JetBrains Mono for all financial numbers, metrics, data tables, and currency values to ensure perfect tabular alignment."
+    },
+    "css_import": "@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');",
+    "tailwind_config": {
+      "sans": ["Inter", "sans-serif"],
+      "heading": ["Manrope", "sans-serif"],
+      "mono": ["'JetBrains Mono'", "monospace"]
+    }
+  },
+  "colors": {
+    "background": {
+      "app": "#F8F9FB",
+      "surface": "#FFFFFF",
+      "surface_hover": "#F1F5F9"
+    },
+    "text": {
+      "primary": "#0F172A",
+      "secondary": "#64748B",
+      "muted": "#94A3B8"
+    },
+    "brand": {
+      "razorpay_red": "#E11D48",
+      "razorpay_red_hover": "#BE123C",
+      "razorpay_red_light": "#FFE4E6"
+    },
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444",
+      "info": "#3B82F6"
+    }
+  },
+  "grids_and_layouts": {
+    "strategy": "High Density Grid (For Dashboards/Analytics). Goal: Density, Data Correlation, Scanability.",
+    "spacing": "Tight (gap-4 or gap-6). Use p-4 to p-6 for card internals.",
+    "borders_and_radius": "Subtle roundness, max 8px border-radius (rounded-lg or rounded-md). Sharp edges, mostly flat UI.",
+    "surfaces": "Dashboard Cards: Flat white background (bg-white), 1px subtle border (border-slate-200), no heavy shadow by default. Hover: Slight lift (-translate-y-1), subtle shadow (shadow-md).",
+    "navigation": "Left sidebar (bg-white or bg-slate-900) for primary navigation, top header (bg-white with border-b) for context/actions."
+  },
+  "visual_enhancers": {
+    "micro_interactions": "Hover states on all interactive elements. Buttons should have slight scale down on active.",
+    "glassmorphism": "Avoid in data-heavy areas to prevent visual refraction. Use flat solid surfaces instead."
+  },
+  "components": {
+    "buttons": "Pill-shaped or rounded-md, sharp button with interaction animations. Primary buttons use Razorpay red.",
+    "cards": "Cardless or dense flat rectangular styles. border border-slate-200 bg-white rounded-lg.",
+    "charts": "Recharts. Use monochromatic tones with Razorpay red for the primary metric/forecast line to highlight insights. Ensure tooltips have solid backgrounds with borders.",
+    "tables": "Dense. Use Shadcn Table. Hover states on rows (hover:bg-slate-50). Right-align numeric columns. Use JetBrains Mono for numbers.",
+    "forms": "Shadcn components. Input fields with border-slate-300 focus:ring-rose-500 focus:border-rose-500."
+  },
+  "motion": {
+    "transitions": "Use specific properties (transition-colors, transition-transform) not transition-all.",
+    "entrance": "Staggered fade-in for lists and dashboard widgets (framer-motion or CSS)."
+  },
+  "accessibility": {
+    "contrast": "Text must meet 4.5:1 ratio. Dark slate text on white/light-grey.",
+    "focus": "Focus rings must be visible, using Razorpay red or standard blue.",
+    "testing": "All interactive elements MUST include data-testid attribute."
+  },
+  "media_and_images": {
+    "avatar": "https://images.pexels.com/photos/27086922/pexels-photo-27086922.jpeg",
+    "usage": "Use the provided avatar for the user profile in the header/sidebar. Avoid placeholders."
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Clean, consistent stroke width (1.5 or 2px). Do not use emojis for icons."
+  },
+  "instructions_to_main_agent": [
+    "Implement the layout with a Sidebar (left) and Main Content Area (right).",
+    "Create 3 main views: Reconciliation, Forecasting, AI CFO.",
+    "Ensure all numbers are formatted properly (e.g., currency, decimals) and use the monospace font.",
+    "Financial logic must remain deterministic in the backend.",
+    "Build a generic LLM service interface in the backend that is ready for Ollama, but return mocked/static AI recommendations for now.",
+    "Use SQLite and SQLAlchemy for data storage.",
+    "Apply the Razorpay red accent selectively—on primary CTAs, active states, and crucial forecast lines in charts, not everywhere.",
+    "Use Recharts for Cash-Flow Forecasting visualization."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Do not center align the app container (.App { text-align: center; } is FORBIDDEN).",
+    "Never use generic centered layouts or simplistic gradients.",
+    "Do not apply 'transition: all'. Use specific transitions (e.g., transition-colors, transition-transform).",
+    "Every interaction needs micro-animations (hover, focus, active).",
+    "Use sonner for toast notifications.",
+    "Never use AI assistant Emojis for icons.",
+    "Include data-testid on all interactive elements.",
+    "Do not use transparent backgrounds for dropdowns or headers over content."
+  ]
+}
