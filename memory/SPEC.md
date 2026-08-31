@@ -19,7 +19,11 @@ An unauthenticated financial intelligence dashboard with four routed views: Over
 
 ## Synthetic anomaly contract
 
-Every injected anomaly has a row in `financial_anomalies` with its dataset run, type, entity, optional related entity, expected/actual amount, and explanation. Controlled types include duplicate-looking payments, unusual payment spikes, captured payments without settlements, orphan settlements, settlement amount mismatches, delayed settlements, and chargebacks.
+Every injected anomaly has a row in `financial_anomalies` with its dataset run, type, entity, optional related entity, expected/actual amount, and explanation. Controlled types include duplicate-looking payments, unusual payment spikes, captured payments without settlements, orphan settlements, settlement amount mismatches, settlement component mismatches, delayed settlements, and chargebacks.
+
+## Deterministic reconciliation
+
+`/api/reconciliation/summary`, `/api/reconciliation/exceptions`, and `/api/reconciliation/{id}` compare each captured payment with its settlement. Expected net is calculated in integer paise as gross payment minus processed refunds, deterministic method fee, and 18% tax on fees. Exact net and component matches are `MATCHED`; equal net with a component difference is `PARTIALLY_MATCHED`; non-zero net difference is `MISMATCHED`; in-window/processing records are `PENDING`; missing, failed, or orphan links are `UNRESOLVED`. The default date range is the server-anchored last 90 days.
 
 ## Auth and roles
 

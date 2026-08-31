@@ -219,3 +219,66 @@ export interface DatasetSummary {
   counts: DatasetCounts;
   anomalies_by_type: AnomalyCount[];
 }
+
+export type ReconciliationEngineStatus =
+  | "MATCHED"
+  | "PARTIALLY_MATCHED"
+  | "MISMATCHED"
+  | "PENDING"
+  | "UNRESOLVED";
+
+export interface ComponentComparison {
+  component: string;
+  expected_amount: number;
+  actual_amount: number | null;
+  difference_amount: number | null;
+  matches: boolean;
+}
+
+export interface ReconciliationEngineRecord {
+  id: string;
+  payment_id: string | null;
+  settlement_id: string | null;
+  order_id: string | null;
+  customer_id: string | null;
+  payment_method: string | null;
+  currency: string;
+  payment_created_at: string | null;
+  settlement_date: string | null;
+  gross_payment: number;
+  refund_amount: number;
+  fees: number;
+  taxes: number;
+  expected_settlement: number;
+  actual_settlement: number | null;
+  difference_amount: number | null;
+  difference_percentage: number | null;
+  status: ReconciliationEngineStatus;
+  possible_reason: string;
+  component_comparisons: ComponentComparison[];
+}
+
+export interface ReconciliationEngineSummary {
+  date_from: string;
+  date_to: string;
+  total_transactions: number;
+  matched_transactions: number;
+  partially_matched_transactions: number;
+  mismatched_transactions: number;
+  pending_transactions: number;
+  unresolved_transactions: number;
+  total_expected_amount: number;
+  total_actual_amount: number;
+  total_discrepancy: number;
+  reconciliation_rate: number;
+  amount_unit: string;
+}
+
+export interface ReconciliationExceptionPage {
+  items: ReconciliationEngineRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+  date_from: string;
+  date_to: string;
+}

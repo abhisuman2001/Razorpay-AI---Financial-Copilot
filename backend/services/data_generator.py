@@ -255,7 +255,12 @@ def build_merchant_dataset(payment_count: int = 20_000, seed: int = 2026) -> dic
     missing_targets = {payment["payment_id"] for payment in rng.sample(settlement_eligible, max(30, payment_count // 500))}
     remaining_for_anomalies = [payment for payment in settlement_eligible if payment["payment_id"] not in missing_targets]
     mismatch_targets = {payment["payment_id"] for payment in rng.sample(remaining_for_anomalies, max(35, payment_count // 450))}
-    delayed_pool = [payment for payment in remaining_for_anomalies if payment["payment_id"] not in mismatch_targets]
+    component_pool = [payment for payment in remaining_for_anomalies if payment["payment_id"] not in mismatch_targets]
+    component_targets = {payment["payment_id"] for payment in rng.sample(component_pool, max(30, payment_count // 600))}
+    delayed_pool = [
+        payment for payment in remaining_for_anomalies
+        if payment["payment_id"] not in mismatch_targets | component_targets
+    ]
     delayed_targets = {payment["payment_id"] for payment in rng.sample(delayed_pool, max(45, payment_count // 400))}
     settlements: list[dict[str, Any]] = []
     for payment in settlement_eligible:
@@ -271,9 +276,12 @@ def build_merchant_dataset(payment_count: int = 20_000, seed: int = 2026) -> dic
         taxes = int(round(fees * 0.18))
         expected_net = gross - refund_amount - fees - taxes
         net = expected_net
+        actual_fees = fees
         settlement_delay = 2
         if payment["payment_id"] in mismatch_targets:
             net += rng.choice([-1, 1]) * rng.randint(125, 2500)
+        if payment["payment_id"] in component_targets:
+            actual_fees += rng.randint(100, 900)
         if payment["payment_id"] in delayed_targets:
             settlement_delay = rng.randint(7, 14)
         settlement_id = _stable_id("setl", seed, len(settlements))
@@ -283,7 +291,7 @@ def build_merchant_dataset(payment_count: int = 20_000, seed: int = 2026) -> dic
             "external_reference": f"utr{seed}{len(settlements):09d}",
             "gross_amount": gross,
             "refund_amount": refund_amount,
-            "fees": fees,
+            "fees": actual_fees,
             "taxes": taxes,
             "net_settlement": net,
             "settlement_date": min(payment["captured_at"].date() + timedelta(days=settlement_delay), period_end),
@@ -294,6 +302,12 @@ def build_merchant_dataset(payment_count: int = 20_000, seed: int = 2026) -> dic
                 "settlement_amount_mismatch", "settlement", settlement_id,
                 "Net settlement differs from gross minus refunds, fees, and taxes.",
                 related_entity_id=payment["payment_id"], expected_amount=expected_net, actual_amount=net,
+            )
+        if payment["payment_id"] in component_targets:
+            add_anomaly(
+                "settlement_component_mismatch", "settlement", settlement_id,
+                "Net settlement matches, but the recorded fee component differs from the deterministic fee schedule.",
+                related_entity_id=payment["payment_id"], expected_amount=fees, actual_amount=actual_fees,
             )
         if payment["payment_id"] in delayed_targets:
             add_anomaly(
