@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Activity, ArrowDownLeft, ArrowUpRight, Bot, ChartNoAxesCombined, ChevronRight, CircleHelp, LayoutDashboard, ListChecks, RefreshCw, Sparkles } from "lucide-react";
+import { Activity, Bot, ChartNoAxesCombined, ChevronRight, CircleHelp, LayoutDashboard, ListChecks, Menu, RefreshCw } from "lucide-react";
 
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { apiGet } from "@/lib/api";
-import { formatINR } from "@/lib/format";
 import type { DashboardResponse } from "@/lib/types";
 
 const navItems = [
@@ -21,16 +21,16 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export default function AppShell() {
+  const [mobileOpen, setMobileOpen] = useState(false);
   const queryClient = useQueryClient();
   const dashboard = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => apiGet<DashboardResponse>("/dashboard"),
     retry: false,
   });
-  const summary = dashboard.data?.summary;
-
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    await queryClient.invalidateQueries({ queryKey: ["executive-dashboard"] });
     await queryClient.invalidateQueries({ queryKey: ["reconciliation"] });
     await queryClient.invalidateQueries({ queryKey: ["forecast"] });
     await queryClient.invalidateQueries({ queryKey: ["cfo"] });
@@ -83,7 +83,7 @@ export default function AppShell() {
       <main className="lg:pl-[250px]">
         <header className="sticky top-0 z-10 flex h-[72px] items-center justify-between border-b border-slate-200 bg-white/95 px-5 backdrop-blur-sm sm:px-8" data-testid="top-header">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-rose-50 text-sm font-bold text-rose-600 lg:hidden">R</div>
+            <button type="button" onClick={() => setMobileOpen(true)} className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 lg:hidden" aria-label="Open navigation" data-testid="mobile-navigation-button"><Menu size={17} /></button>
             <div>
               <p className="text-xs font-medium text-slate-400" data-testid="header-breadcrumb">Workspace / Finance intelligence</p>
               <p className="font-heading text-sm font-semibold text-slate-800" data-testid="header-account-name">Northstar Commerce Pvt Ltd</p>
@@ -103,27 +103,18 @@ export default function AppShell() {
         </header>
 
         <div className="mx-auto max-w-[1440px] px-5 py-7 sm:px-8 sm:py-9">
-          <div className="mb-7 grid grid-cols-2 gap-3 xl:grid-cols-4" data-testid="quick-metrics-strip">
-            <QuickMetric label="Cash balance" value={summary ? formatINR(summary.cash_balance, true) : "—"} icon={<ArrowUpRight size={14} />} tone="red" testId="quick-metric-cash" />
-            <QuickMetric label="Incoming · 30d" value={summary ? formatINR(summary.incoming_30d, true) : "—"} icon={<ArrowDownLeft size={14} />} tone="green" testId="quick-metric-incoming" />
-            <QuickMetric label="Outgoing · 30d" value={summary ? formatINR(summary.outgoing_30d, true) : "—"} icon={<ArrowUpRight size={14} />} tone="slate" testId="quick-metric-outgoing" />
-            <QuickMetric label="Open exceptions" value={summary ? String(summary.open_exceptions) : "—"} icon={<Sparkles size={14} />} tone="amber" testId="quick-metric-exceptions" />
-          </div>
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
             <Outlet />
           </motion.div>
         </div>
       </main>
-    </div>
-  );
-}
 
-function QuickMetric({ label, value, icon, tone, testId }: { label: string; value: string; icon: ReactNode; tone: "red" | "green" | "slate" | "amber"; testId: string }) {
-  const tones = { red: "bg-rose-50 text-rose-600", green: "bg-emerald-50 text-emerald-600", slate: "bg-slate-100 text-slate-500", amber: "bg-amber-50 text-amber-600" };
-  return (
-    <div className="border-b border-slate-200 pb-3" data-testid={testId}>
-      <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-slate-400"><span className={`flex h-5 w-5 items-center justify-center rounded ${tones[tone]}`}>{icon}</span><span data-testid={`${testId}-label`}>{label}</span></div>
-      <p className="font-mono text-lg font-medium tracking-tight text-slate-900" data-testid={`${testId}-value`}>{value}</p>
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-[290px] p-0" data-testid="mobile-navigation-panel">
+          <SheetHeader className="border-b border-slate-100 p-5 text-left"><SheetTitle className="font-heading text-base" data-testid="mobile-navigation-title">Razorpay AI</SheetTitle><SheetDescription data-testid="mobile-navigation-description">Financial Copilot workspace</SheetDescription></SheetHeader>
+          <nav className="space-y-1 p-4" aria-label="Mobile navigation" data-testid="mobile-primary-navigation">{navItems.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"} onClick={() => setMobileOpen(false)} className={navClass} data-testid={`mobile-nav-${label.toLowerCase().replaceAll(" ", "-")}`}><Icon size={17} /><span>{label}</span><ChevronRight size={14} className="ml-auto" /></NavLink>)}</nav>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

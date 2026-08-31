@@ -1,0 +1,101 @@
+{
+  "summary": "13 checks passed (4 backend test files / 5 tests + 4 browser checks, mapped across 13 checks[] entries) covering all 8 acceptance criteria for the executive dashboard. No bugs found.",
+  "passed": 13,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Executive header communicates the requested attention framing",
+      "name": "overview-header-and-metrics-render",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "On '/': overview-title = 'Good morning', overview-subtitle = \"Here's what needs your attention.\", overview-data-date contains 'Data as of 31 Aug 2026'"
+    },
+    {
+      "criterion": "Top executive metrics are complete and backend-owned",
+      "name": "test_tscheck_executive_top_metrics.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/executive/dashboard -> 200; 4 metrics ids={revenue,current_balance,cash_forecast,reconciliation_exceptions}; each has label/value/period_label/detail/explanation/calculation/source_metric/source_tool/drilldown_path/non-empty evidence[]; revenue period_label contains 'month', change_percent and trend populated"
+    },
+    {
+      "criterion": "Top executive metrics are complete and backend-owned (UI)",
+      "name": "overview-header-and-metrics-render",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "executive-metrics-grid visible with all 4 metric cards (revenue, current_balance, cash_forecast, reconciliation_exceptions); revenue value and detail text non-empty"
+    },
+    {
+      "criterion": "Important metrics explain why and expose underlying records",
+      "name": "metric-why-panel-drilldown",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Clicked reconciliation_exceptions Why button -> metric-explanation-panel opened with title/value/period/summary/calculation/source name+tool ('get_reconciliation_exceptions') and non-empty metric-evidence-section rows"
+    },
+    {
+      "criterion": "Metric drill-down reaches the relevant detailed workflow",
+      "name": "metric-why-panel-drilldown",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "metric-drilldown-link href='/reconciliation'; clicking navigated to /reconciliation page"
+    },
+    {
+      "criterion": "Metric drill-down reaches the relevant detailed workflow (API paths)",
+      "name": "test_tscheck_executive_top_metrics.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "reconciliation_exceptions.drilldown_path=='/reconciliation'; cash_forecast and current_balance drilldown_path=='/forecast'; revenue drilldown_path=='/cfo'"
+    },
+    {
+      "criterion": "Cash-flow section shows actual history and forecast",
+      "name": "test_tscheck_cashflow_history_forecast.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/executive/dashboard -> cashflow_actual has exactly 60 points (cumulative_cash_balance present), cashflow_forecast has exactly 30 points (predicted_balance within [balance_lower, balance_upper]); forecast dates start after actual history ends"
+    },
+    {
+      "criterion": "Cash-flow section shows actual history and forecast (UI)",
+      "name": "cashflow-and-reconciliation-sections",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "executive-cashflow-chart visible with legends 'actual' and 'Forecast'; cashflow-view-forecast-link href='/forecast'"
+    },
+    {
+      "criterion": "Reconciliation section summarizes required health metrics",
+      "name": "test_tscheck_reconciliation_health_metrics.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "dashboard.reconciliation fields (transactions_analyzed, matched, mismatched, pending, total_discrepancy, reconciliation_rate) exactly match GET /api/reconciliation/summary (total_transactions, matched_transactions, mismatched_transactions, pending_transactions, total_discrepancy, reconciliation_rate)"
+    },
+    {
+      "criterion": "Reconciliation section summarizes required health metrics (UI)",
+      "name": "cashflow-and-reconciliation-sections",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "executive-reconciliation-rate, recon-stat-analyzed/matched/mismatched/pending values, and executive-discrepancy-value all rendered non-empty; reconciliation-view-exceptions-link href='/reconciliation'"
+    },
+    {
+      "criterion": "AI insights provide actionable, sourced attention items",
+      "name": "test_tscheck_ai_insights_sourced.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/executive/dashboard -> insights[] length 5; every insight has severity in {high,medium,low}, title, summary, metric_label, metric_value, source_tool, source_ref, action, classification in {fact,prediction}; at least one high-severity insight present"
+    },
+    {
+      "criterion": "AI insights provide actionable, sourced attention items (UI)",
+      "name": "cashflow-and-reconciliation-sections",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "executive-insights-grid rendered with at least one insight card title visible"
+    },
+    {
+      "criterion": "Dashboard is polished and responsive with mobile priority order",
+      "name": "mobile-priority-order-and-navigation",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "At 390x844 viewport: executive-insights-section y-position < executive-metrics-grid y-position and < executive-analytics-grid y-position; no horizontal overflow (scrollWidth<=clientWidth); mobile-navigation-button opened mobile-navigation-panel and mobile-nav-cash-flow link navigated to /forecast"
+    }
+  ]
+}

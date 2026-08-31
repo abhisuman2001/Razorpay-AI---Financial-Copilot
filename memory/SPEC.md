@@ -2,7 +2,7 @@
 
 ## Current MVP
 
-An unauthenticated financial intelligence dashboard with four routed views: Overview, Reconciliation, Forecast, and AI CFO. It uses synthetic transactions seeded into SQLite through SQLAlchemy and exposes read-only FastAPI endpoints under `/api/dashboard`.
+An unauthenticated financial intelligence dashboard with four routed views: Executive Overview, Reconciliation, Cash Flow, and AI CFO. It uses synthetic transactions seeded into SQLite through SQLAlchemy and exposes read-only FastAPI endpoints under `/api`.
 
 ## Data model
 
@@ -10,7 +10,7 @@ An unauthenticated financial intelligence dashboard with four routed views: Over
 
 ## Key flows
 
-- Overview loads backend-owned cash, inflow, outflow, runway, reconciliation, forecast, and insight data.
+- Executive Overview loads one backend-owned view model with current-month revenue, current balance, 30-day cash forecast, reconciliation exceptions, 60 actual cash-flow days, 30 forecast days, reconciliation health, AI CFO attention items, metric explanations, and underlying evidence.
 - Reconciliation lists the deterministic transaction queue and mismatch variance.
 - Cash Flow renders 90 days of actual daily income, expenses, net flow, and cumulative balance plus selectable 7/30/90-day forecasts.
 - AI CFO provides session-only chat, fresh daily insights, facts, predictions, reasoning, recommendations, and data citations from read-only financial tools.
@@ -34,6 +34,10 @@ Every injected anomaly has a row in `financial_anomalies` with its dataset run, 
 The read-only tool registry exposes `get_revenue`, `get_expenses`, `get_cash_balance`, `get_failed_payments`, `get_refunds`, `get_settlement_summary`, `get_reconciliation_exceptions`, `get_cashflow_forecast`, `get_top_customers`, and `get_customer_statistics`. Every tool returns structured, period-labeled JSON with source references and fact/prediction classification. `/api/cfo/chat` selects only relevant tools and returns grounded facts, predictions, reasoning, recommendations, and citations. `/api/cfo/insights` creates five fresh daily insights on request. `/api/cfo/tools/{tool_name}` makes tool output auditable.
 
 `AI_CFO_PROVIDER=deterministic` is the zero-cost default. An optional loopback-only Ollama adapter can be enabled later with `AI_CFO_PROVIDER=ollama`; it receives only selected structured tool context, has no write capability, and is guarded against unsupported numeric output. Provider failures or ungrounded output fall back deterministically. Chat history is held only in the browser session and is never written to SQLite.
+
+## Executive dashboard
+
+`GET /api/executive/dashboard` is the overview source of truth. Its four top metrics include a deterministic explanation, calculation statement, source metric/tool, drill-down route, and recent payment/settlement/expense/forecast/reconciliation evidence. On mobile, AI attention items precede metrics and chart content; on desktop, metrics lead, followed by cash flow, reconciliation, and insights.
 
 ## Auth and roles
 

@@ -391,3 +391,51 @@ export interface DailyInsightsResponse {
   disclaimer: string;
   insights: DailyInsight[];
 }
+
+export interface MetricEvidence {
+  id: string;
+  type: string;
+  label: string;
+  date: string;
+  amount: number;
+  status: string;
+}
+
+export interface ExecutiveMetric {
+  id: "revenue" | "current_balance" | "cash_forecast" | "reconciliation_exceptions";
+  label: string;
+  value: number;
+  value_kind: "currency" | "count";
+  change_percent: number | null;
+  trend: "up" | "down" | "neutral";
+  period_label: string;
+  detail: string;
+  explanation: string;
+  calculation: string;
+  source_metric: string;
+  source_tool: string;
+  drilldown_path: string;
+  evidence: MetricEvidence[];
+}
+
+export interface ExecutiveReconciliation {
+  transactions_analyzed: number;
+  matched: number;
+  partially_matched: number;
+  mismatched: number;
+  pending: number;
+  unresolved: number;
+  total_discrepancy: number;
+  reconciliation_rate: number;
+}
+
+export interface ExecutiveDashboardResponse {
+  as_of_date: string;
+  metrics: ExecutiveMetric[];
+  cashflow_actual: HistoricalCashFlowPoint[];
+  cashflow_forecast: PredictedCashFlowPoint[];
+  reconciliation: ExecutiveReconciliation;
+  insights: DailyInsight[];
+  insight_mode: string;
+  amount_unit: string;
+}
