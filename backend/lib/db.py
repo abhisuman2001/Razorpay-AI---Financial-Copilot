@@ -25,6 +25,7 @@ SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=
 
 async def init_db() -> None:
     from models.tables import FinancialTransaction
+    from models import merchant_tables  # noqa: F401
     from services.synthetic import build_synthetic_transactions
 
     async with engine.begin() as connection:
