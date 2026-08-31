@@ -11,7 +11,7 @@ import type { DashboardResponse } from "@/lib/types";
 const navItems = [
   { to: "/", label: "Overview", icon: LayoutDashboard },
   { to: "/reconciliation", label: "Reconciliation", icon: ListChecks },
-  { to: "/forecast", label: "Cash forecast", icon: ChartNoAxesCombined },
+  { to: "/forecast", label: "Cash flow", icon: ChartNoAxesCombined },
   { to: "/cfo", label: "AI CFO", icon: Bot },
 ];
 

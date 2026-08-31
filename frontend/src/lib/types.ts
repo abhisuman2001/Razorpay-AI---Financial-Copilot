@@ -282,3 +282,52 @@ export interface ReconciliationExceptionPage {
   date_from: string;
   date_to: string;
 }
+
+export interface HistoricalCashFlowPoint {
+  date: string;
+  daily_income: number;
+  daily_expenses: number;
+  daily_net_cashflow: number;
+  cumulative_cash_balance: number;
+}
+
+export interface PredictedCashFlowPoint {
+  date: string;
+  predicted_income: number;
+  predicted_expenses: number;
+  predicted_net_cashflow: number;
+  predicted_balance: number;
+  balance_lower: number;
+  balance_upper: number;
+}
+
+export interface ForecastRisk {
+  id: string;
+  severity: "high" | "medium" | "low";
+  category: string;
+  title: string;
+  description: string;
+  metric_label: string;
+  metric_value: string;
+  source: string;
+}
+
+export interface CashFlowForecastResponse {
+  horizon_days: 7 | 30 | 90;
+  as_of_date: string;
+  history_start: string;
+  history_end: string;
+  opening_cash_balance: number;
+  current_cash_balance: number;
+  expected_incoming: number;
+  expected_outgoing: number;
+  forecasted_balance: number;
+  confidence_level: number;
+  confidence_label: string;
+  model_name: string;
+  methodology: string;
+  amount_unit: string;
+  historical: HistoricalCashFlowPoint[];
+  forecast: PredictedCashFlowPoint[];
+  risks: ForecastRisk[];
+}
