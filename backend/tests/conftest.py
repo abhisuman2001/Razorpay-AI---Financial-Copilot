@@ -45,3 +45,19 @@ async def aclient():
 
 
 # --- app-specific fixtures below this line ---
+
+
+def activate_scenario(client: httpx.Client, scenario_id: str) -> dict:
+    """Activate a demo scenario and return the activation payload."""
+    resp = client.post(f"/demo/scenarios/{scenario_id}/activate", timeout=60.0)
+    assert resp.status_code == 200, f"activate {scenario_id} failed: {resp.status_code} {resp.text[:300]}"
+    return resp.json()
+
+
+@pytest.fixture
+def restore_healthy_business():
+    """Ensure the global demo scenario is healthy_business again after the test,
+    regardless of pass/fail, per seed_facts (Healthy Business must remain active)."""
+    with httpx.Client(base_url=API_URL, timeout=60.0) as c:
+        yield c
+        activate_scenario(c, "healthy_business")

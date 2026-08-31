@@ -12,6 +12,7 @@ from routers.reconciliation import router as reconciliation_router
 from routers.forecast import router as forecast_router
 from routers.cfo import router as cfo_router
 from routers.executive import router as executive_router
+from routers.demo import router as demo_router
 
 
 ROOT_DIR = Path(__file__).parent
@@ -43,6 +44,7 @@ api_router.include_router(reconciliation_router)
 api_router.include_router(forecast_router)
 api_router.include_router(cfo_router)
 api_router.include_router(executive_router)
+api_router.include_router(demo_router)
 
 app.add_middleware(
     CORSMiddleware,

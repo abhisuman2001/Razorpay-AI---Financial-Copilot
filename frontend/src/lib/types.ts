@@ -439,3 +439,26 @@ export interface ExecutiveDashboardResponse {
   insight_mode: string;
   amount_unit: string;
 }
+
+export interface DemoScenario {
+  id: string;
+  name: string;
+  description: string;
+  signal: string;
+  expected_effects: string[];
+  active: boolean;
+}
+
+export interface DemoScenarioList {
+  active_scenario_id: string;
+  scenarios: DemoScenario[];
+}
+
+export interface DemoScenarioActivation {
+  active_scenario_id: string;
+  activated_at: string;
+  dataset_run_id: string;
+  payment_count: number;
+  generated_records: Record<string, number>;
+  message: string;
+}

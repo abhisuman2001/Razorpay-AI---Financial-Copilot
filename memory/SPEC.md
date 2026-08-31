@@ -39,6 +39,10 @@ The read-only tool registry exposes `get_revenue`, `get_expenses`, `get_cash_bal
 
 `GET /api/executive/dashboard` is the overview source of truth. Its four top metrics include a deterministic explanation, calculation statement, source metric/tool, drill-down route, and recent payment/settlement/expense/forecast/reconciliation evidence. On mobile, AI attention items precede metrics and chart content; on desktop, metrics lead, followed by cash flow, reconciliation, and insights.
 
+## Demo Mode
+
+The global presentation scenario is persisted in the single-row SQLite `demo_scenario_state` table. `GET /api/demo/scenarios` returns Healthy Business, Revenue Decline, Payment Failure Spike, Cash Flow Risk, Settlement Discrepancy, and High Refund Rate. `POST /api/demo/scenarios/{scenario_id}/activate` atomically replaces only synthetic merchant tables with a deterministic 20,000-payment scenario, then records the active state. Healthy Business is the baseline/reset. Because scenarios regenerate the same relational tables, Executive Dashboard, Reconciliation, Cash Flow, AI CFO, and dataset APIs all continue through their existing calculation pipelines rather than receiving hard-coded UI numbers.
+
 ## Auth and roles
 
 No auth or roles in this cost-zero prototype. No credentials are seeded.

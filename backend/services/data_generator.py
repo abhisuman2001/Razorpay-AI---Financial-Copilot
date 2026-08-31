@@ -59,6 +59,10 @@ EXPENSES = {
     "Professional services": ["KRM Legal", "Ledger Partners", "Audit Associates"],
     "Utilities": ["Electricity Board", "Broadband Services", "Mobile Services"],
 }
+DEMO_SCENARIO_IDS = {
+    "healthy_business", "revenue_decline", "payment_failure_spike",
+    "cash_flow_risk", "settlement_discrepancy", "high_refund_rate",
+}
 
 
 def _stable_id(prefix: str, seed: int, index: int) -> str:
@@ -76,9 +80,13 @@ def _random_datetime(rng: random.Random, start: date, days: int) -> datetime:
     return datetime.combine(day, time(hour, rng.randrange(60), rng.randrange(60)))
 
 
-def build_merchant_dataset(payment_count: int = 20_000, seed: int = 2026) -> dict[str, list[dict[str, Any]]]:
+def build_merchant_dataset(
+    payment_count: int = 20_000, seed: int = 2026, scenario_id: str = "healthy_business"
+) -> dict[str, list[dict[str, Any]]]:
     if payment_count < 20_000:
         raise ValueError("payment_count must be at least 20,000")
+    if scenario_id not in DEMO_SCENARIO_IDS:
+        raise ValueError(f"unknown demo scenario: {scenario_id}")
 
     rng = random.Random(seed)
     np_rng = np.random.default_rng(seed)
@@ -388,6 +396,147 @@ def build_merchant_dataset(payment_count: int = 20_000, seed: int = 2026) -> dic
             "payment_mode": rng.choice(["bank_transfer", "corporate_card", "upi", "direct_debit"]),
         })
 
+    current_month_start = period_end.replace(day=1)
+    payment_by_id = {payment["payment_id"]: payment for payment in payments}
+    order_by_id = {order["order_id"]: order for order in orders}
+
+    if scenario_id == "revenue_decline":
+        affected_orders = {
+            order["order_id"] for order in orders if order["created_at"].date() >= current_month_start
+        }
+        for order_id in affected_orders:
+            order_by_id[order_id]["amount"] = max(100, int(order_by_id[order_id]["amount"] * 0.48))
+        for payment in payments:
+            if payment["order_id"] in affected_orders:
+                payment["amount"] = order_by_id[payment["order_id"]]["amount"]
+        for refund in refunds:
+            payment = payment_by_id[refund["payment_id"]]
+            if payment["order_id"] in affected_orders:
+                refund["amount"] = min(payment["amount"], max(100, int(refund["amount"] * 0.48)))
+        processed_refunds = defaultdict(int)
+        for refund in refunds:
+            if refund["status"] == "processed":
+                processed_refunds[refund["payment_id"]] += refund["amount"]
+        for settlement in settlements:
+            payment = payment_by_id.get(settlement["payment_id"])
+            if payment and payment["order_id"] in affected_orders:
+                fee = int(round(payment["amount"] * (0.018 if payment["payment_method"] == "upi" else 0.021)))
+                tax = int(round(fee * 0.18))
+                refund_amount = min(processed_refunds[payment["payment_id"]], payment["amount"])
+                settlement.update({
+                    "gross_amount": payment["amount"], "refund_amount": refund_amount,
+                    "fees": fee, "taxes": tax,
+                    "net_settlement": payment["amount"] - refund_amount - fee - tax,
+                })
+
+    elif scenario_id == "payment_failure_spike":
+        spike_start = period_end - timedelta(days=20)
+        candidates = [
+            payment for payment in payments
+            if payment["status"] == "captured" and payment["created_at"].date() >= spike_start
+        ]
+        spike_targets = rng.sample(candidates, min(int(len(candidates) * 0.38), len(candidates)))
+        target_ids = {payment["payment_id"] for payment in spike_targets}
+        removed_entity_ids = {
+            item["settlement_id"] for item in settlements if item["payment_id"] in target_ids
+        }
+        removed_entity_ids.update(item["refund_id"] for item in refunds if item["payment_id"] in target_ids)
+        removed_entity_ids.update(item["chargeback_id"] for item in chargebacks if item["payment_id"] in target_ids)
+        settlements = [item for item in settlements if item["payment_id"] not in target_ids]
+        refunds = [item for item in refunds if item["payment_id"] not in target_ids]
+        chargebacks = [item for item in chargebacks if item["payment_id"] not in target_ids]
+        anomalies = [
+            item for item in anomalies
+            if item["entity_id"] not in removed_entity_ids and item["related_entity_id"] not in target_ids
+        ]
+        for anomaly_index, anomaly in enumerate(anomalies):
+            anomaly["anomaly_id"] = _stable_id("anom", seed, anomaly_index)
+        for payment in spike_targets:
+            payment["status"] = "failed"
+            payment["captured_at"] = None
+            failed_payments.append({
+                "failed_payment_id": _stable_id("failspike", seed, len(failed_payments)),
+                "payment_id": payment["payment_id"], "error_code": "GATEWAY_ERROR",
+                "error_description": "Bank gateway did not respond during the controlled failure spike",
+                "failure_stage": "gateway", "retryable": True,
+                "failed_at": payment["created_at"] + timedelta(seconds=15),
+            })
+            add_anomaly(
+                "payment_failure_spike", "payment", payment["payment_id"],
+                "Payment was deterministically converted to a gateway failure for Demo Mode.",
+                actual_amount=payment["amount"],
+            )
+
+    elif scenario_id == "cash_flow_risk":
+        risk_start = period_end - timedelta(days=44)
+        risk_expenses = [expense for expense in expenses if expense["date"] >= risk_start]
+        for expense in risk_expenses:
+            expense["amount"] = int(expense["amount"] * 35)
+        for expense in sorted(risk_expenses, key=lambda item: item["amount"], reverse=True)[:40]:
+            add_anomaly(
+                "unusual_expense_spike", "expense", expense["expense_id"],
+                "Recent booked expense was amplified for the Cash Flow Risk demo scenario.",
+                actual_amount=expense["amount"],
+            )
+
+    elif scenario_id == "settlement_discrepancy":
+        discrepancy_start = period_end - timedelta(days=89)
+        candidates = [
+            settlement for settlement in settlements
+            if settlement["payment_id"] and settlement["status"] == "settled"
+            and settlement["settlement_date"] >= discrepancy_start
+        ]
+        discrepancy_targets = rng.sample(candidates, min(520, len(candidates)))
+        for settlement in discrepancy_targets:
+            expected = settlement["net_settlement"]
+            difference = max(500, int(abs(expected) * rng.uniform(0.02, 0.08)))
+            settlement["net_settlement"] = expected - difference
+            add_anomaly(
+                "demo_settlement_discrepancy", "settlement", settlement["settlement_id"],
+                "Net settlement was reduced from the deterministic expected amount for Demo Mode.",
+                related_entity_id=settlement["payment_id"], expected_amount=expected,
+                actual_amount=settlement["net_settlement"],
+            )
+
+    elif scenario_id == "high_refund_rate":
+        refund_window_start = current_month_start
+        existing_refunds = defaultdict(int)
+        for refund in refunds:
+            if refund["status"] == "processed":
+                existing_refunds[refund["payment_id"]] += refund["amount"]
+        candidates = [
+            payment for payment in payments
+            if payment["status"] == "captured"
+            and refund_window_start <= payment["created_at"].date() <= period_end - timedelta(days=2)
+            and existing_refunds[payment["payment_id"]] == 0
+        ]
+        refund_targets = rng.sample(candidates, min(int(len(candidates) * 0.32), len(candidates)))
+        settlement_by_payment = {
+            settlement["payment_id"]: settlement for settlement in settlements if settlement["payment_id"]
+        }
+        for index, payment in enumerate(refund_targets):
+            amount = int(payment["amount"] * rng.uniform(0.45, 1.0))
+            amount = min(max(amount, 100), payment["amount"])
+            created_at = min(
+                payment["captured_at"] + timedelta(days=rng.randint(1, 2)),
+                datetime.combine(period_end, time(18, 0)),
+            )
+            refund_id = _stable_id("rfndhigh", seed, index)
+            refunds.append({
+                "refund_id": refund_id, "payment_id": payment["payment_id"], "amount": amount,
+                "currency": "INR", "status": "processed", "reason": "customer_request",
+                "created_at": created_at, "processed_at": created_at + timedelta(hours=2),
+            })
+            settlement = settlement_by_payment.get(payment["payment_id"])
+            if settlement:
+                settlement["refund_amount"] += amount
+                settlement["net_settlement"] -= amount
+            add_anomaly(
+                "high_refund_rate", "refund", refund_id,
+                "Processed refund was added for the High Refund Rate demo scenario.",
+                related_entity_id=payment["payment_id"], actual_amount=amount,
+            )
+
     return {
         "dataset_runs": [{
             "id": run_id,
@@ -410,9 +559,12 @@ def build_merchant_dataset(payment_count: int = 20_000, seed: int = 2026) -> dic
 
 
 async def replace_merchant_dataset(
-    session: AsyncSession, payment_count: int = 20_000, seed: int = 2026
+    session: AsyncSession, payment_count: int = 20_000, seed: int = 2026,
+    scenario_id: str = "healthy_business",
 ) -> dict[str, int | str]:
-    dataset = build_merchant_dataset(payment_count=payment_count, seed=seed)
+    dataset = build_merchant_dataset(
+        payment_count=payment_count, seed=seed, scenario_id=scenario_id
+    )
     delete_order = [
         FinancialAnomaly, Chargeback, FailedPayment, Settlement, Refund, Payment, Order, Customer, Expense, DatasetRun,
     ]

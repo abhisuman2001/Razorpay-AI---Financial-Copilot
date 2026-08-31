@@ -1,0 +1,94 @@
+{
+  "summary": "12 checks passed (9 backend test files / 12 test functions covering all 6 scenario data-pipeline criteria + persistence + hardcoded-value check, plus 2 browser checks covering the Demo Mode UI list and full activation/persistence/reset flow) across all 8 acceptance criteria. No bugs found. Healthy Business is active at test end, matching seed_facts.",
+  "passed": 12,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Demo Mode is clearly visible and lists all requested scenarios",
+      "name": "demo-mode-lists-scenarios",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "demo-mode-button visible in header; opened demo-mode-dialog lists all 6 scenarios (healthy_business, revenue_decline, payment_failure_spike, cash_flow_risk, settlement_discrepancy, high_refund_rate) each with non-empty name/description/signal"
+    },
+    {
+      "criterion": "Demo Mode is clearly visible and lists all requested scenarios (API)",
+      "name": "test_tscheck_demo_mode_scenario_list.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/demo/scenarios -> 200; scenario ids exactly match the 6 expected ids; each has name/description/signal/expected_effects; exactly one scenario flagged active"
+    },
+    {
+      "criterion": "Scenario selection is confirmed, shows progress, and persists globally",
+      "name": "demo-mode-activation-flow-and-persistence",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Selected Cash Flow Risk -> Activate button enabled -> clicked -> button showed 'Switching scenario...' -> dialog closed on POST /api/demo/scenarios/cash_flow_risk/activate success -> header label showed 'Cash Flow Risk'; page reload still showed Cash Flow Risk active in header and dialog; restored Healthy Business via same flow and confirmed persistence after reload"
+    },
+    {
+      "criterion": "Scenario selection is confirmed, shows progress, and persists globally (API)",
+      "name": "test_tscheck_demo_scenarios_pipeline.py::test_scenario_activation_persists_across_reload",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/demo/scenarios/revenue_decline/activate -> 200 with dataset_run_id and generated_records.payments=20000; two subsequent independent GET /api/demo/scenarios calls both report active_scenario_id='revenue_decline'; POST .../not_a_real_scenario/activate -> 404"
+    },
+    {
+      "criterion": "Revenue Decline changes data through the normal calculation pipeline",
+      "name": "test_tscheck_demo_scenarios_pipeline.py::test_revenue_decline_lowers_revenue_through_pipeline",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "healthy_business generates 20000 payments; after activating revenue_decline (also 20000 payments), GET /api/cfo/tools/get_revenue current_month_revenue and GET /api/executive/dashboard revenue metric.value both fell below 70% of the healthy baseline and matched each other; trend='down'"
+    },
+    {
+      "criterion": "Payment Failure Spike changes failure metrics and AI insight",
+      "name": "test_tscheck_demo_scenarios_pipeline.py::test_payment_failure_spike_raises_failures_and_insights",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "failed_payments generated_records and GET /api/cfo/tools/get_failed_payments current_month_failed_count both rose >20% over healthy_business; GET /api/cfo/insights insights text contained 'fail'"
+    },
+    {
+      "criterion": "Cash Flow Risk changes history, forecast, chart, and risks",
+      "name": "test_tscheck_demo_scenarios_pipeline.py::test_cash_flow_risk_raises_outgoing_and_lowers_forecast",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/forecast/30 expected_outgoing rose >20% and forecasted_balance fell vs healthy_business; forecast/historical/risks arrays populated; GET /api/executive/dashboard cashflow_forecast has 30 points and cashflow_actual non-empty"
+    },
+    {
+      "criterion": "Settlement Discrepancy changes reconciliation results",
+      "name": "test_tscheck_demo_scenarios_pipeline.py::test_settlement_discrepancy_raises_mismatches",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/reconciliation/summary mismatched_transactions and total_discrepancy both rose >20% vs healthy_business; GET /api/reconciliation/exceptions returned items and GET /api/reconciliation/{id} detail -> 200"
+    },
+    {
+      "criterion": "High Refund Rate changes refund and settlement-driven outputs",
+      "name": "test_tscheck_demo_scenarios_pipeline.py::test_high_refund_rate_raises_refund_rate",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/cfo/tools/get_refunds refund_rate_percent rose >50% vs healthy_business; get_settlement_summary settlement_count/refund_amount > 0; GET /api/cfo/insights text contained 'refund'; GET /api/executive/dashboard insights[] non-empty"
+    },
+    {
+      "criterion": "Healthy Business acts as a complete baseline reset",
+      "name": "test_tscheck_demo_scenarios_pipeline.py::test_healthy_business_resets_baseline",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "After activating revenue_decline then re-activating healthy_business, GET /api/demo/scenarios reports active_scenario_id=healthy_business; get_revenue current_month_revenue and forecast/30 forecasted_balance both returned to the exact original baseline values (deterministic same seed)"
+    },
+    {
+      "criterion": "Healthy Business acts as a complete baseline reset (no hard-coded frontend values)",
+      "name": "test_tscheck_demo_no_hardcoded_frontend_values.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Scanned all frontend/src/**/*.tsx (excluding shadcn ui/ primitives) for bare 6+ digit numeric literals in JSX text; none found -- financial figures are sourced from API responses, not hard-coded"
+    },
+    {
+      "criterion": "Scenario selection is confirmed, shows progress, and persists globally (dialog contents/confirmation copy)",
+      "name": "demo-mode-lists-scenarios",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Same run also confirmed demo-mode-dialog shows description text per scenario card as part of the confirmation UI"
+    }
+  ]
+}

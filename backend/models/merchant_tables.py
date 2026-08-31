@@ -17,6 +17,17 @@ class DatasetRun(Base):
     period_end: Mapped[date] = mapped_column(Date, nullable=False)
 
 
+class DemoScenarioState(Base):
+    __tablename__ = "demo_scenario_state"
+
+    id: Mapped[str] = mapped_column(String(20), primary_key=True, default="global")
+    scenario_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    activated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    dataset_run_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    payment_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    seed: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 class Customer(Base):
     __tablename__ = "customers"
 
