@@ -462,3 +462,124 @@ export interface DemoScenarioActivation {
   generated_records: Record<string, number>;
   message: string;
 }
+
+export type FinancialSourceType = "bank" | "payment_gateway" | "accounting" | "marketplace";
+export type FinancialImportStatus = "ANALYZED" | "IMPORTED" | "RECONCILED" | "FAILED";
+export type ImportMatchStatus = "MATCHED" | "UNMATCHED" | "AMOUNT_MISMATCH" | "DATE_MISMATCH" | "DUPLICATE";
+
+export interface ColumnMapping {
+  transaction_id: string | null;
+  reference: string | null;
+  date: string | null;
+  amount: string | null;
+  debit: string | null;
+  credit: string | null;
+  direction: string | null;
+  description: string | null;
+  currency: string | null;
+  status: string | null;
+  counterparty: string | null;
+}
+
+export interface MappingSuggestion {
+  internal_field: string;
+  detected_column: string | null;
+  confidence: number;
+  alternatives: string[];
+}
+
+export interface NormalizedPreview {
+  external_id: string | null;
+  reference: string | null;
+  transaction_date: string | null;
+  amount: number | null;
+  direction: string | null;
+  currency: string | null;
+  description: string | null;
+  counterparty: string | null;
+  status: string | null;
+}
+
+export interface ImportPreviewRow {
+  source_row_number: number;
+  original_data: Record<string, string>;
+  normalized: NormalizedPreview | null;
+  errors: string[];
+}
+
+export interface ImportReconciliationSummary {
+  total_transactions: number;
+  matched: number;
+  unmatched: number;
+  amount_mismatches: number;
+  date_mismatches: number;
+  duplicates: number;
+  average_confidence: number;
+}
+
+export interface ImportBatch {
+  id: string;
+  source_type: FinancialSourceType;
+  filename: string;
+  file_size: number;
+  file_sha256: string;
+  status: FinancialImportStatus;
+  row_count: number;
+  normalized_count: number;
+  duplicate_count: number;
+  uploaded_at: string;
+  imported_at: string | null;
+  reconciled_at: string | null;
+}
+
+export interface ImportWorkspaceResponse {
+  batch: ImportBatch;
+  headers: string[];
+  mapping: ColumnMapping;
+  suggestions: MappingSuggestion[];
+  preview: ImportPreviewRow[];
+  reconciliation: ImportReconciliationSummary | null;
+}
+
+export interface ImportBatchList {
+  batches: ImportBatch[];
+  total: number;
+}
+
+export interface FinancialImportResult {
+  batch: ImportBatch;
+  reconciliation: ImportReconciliationSummary;
+  message: string;
+}
+
+export interface ImportedTransactionView {
+  id: string;
+  batch_id: string;
+  source_type: FinancialSourceType;
+  source_row_number: number;
+  external_id: string | null;
+  reference: string | null;
+  transaction_date: string;
+  amount: number;
+  direction: string;
+  currency: string;
+  description: string | null;
+  counterparty: string | null;
+  status: string | null;
+  duplicate_of_id: string | null;
+  match_status: ImportMatchStatus;
+  match_rule: string;
+  confidence: number;
+  matched_transaction_id: string | null;
+  amount_difference: number | null;
+  date_difference_days: number | null;
+  reason: string;
+  original_data: Record<string, string>;
+}
+
+export interface ImportedTransactionPage {
+  items: ImportedTransactionView[];
+  total: number;
+  limit: number;
+  offset: number;
+}

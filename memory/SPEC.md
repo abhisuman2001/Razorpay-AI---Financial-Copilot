@@ -2,7 +2,7 @@
 
 ## Current MVP
 
-An unauthenticated financial intelligence dashboard with four routed views: Executive Overview, Reconciliation, Cash Flow, and AI CFO. It uses synthetic transactions seeded into SQLite through SQLAlchemy and exposes read-only FastAPI endpoints under `/api`.
+An unauthenticated financial intelligence workspace with Executive Overview, Reconciliation, Cash Flow, AI CFO, Demo Mode, and Connect Financial Sources. It uses SQLite through SQLAlchemy and exposes FastAPI endpoints under `/api`.
 
 ## Data model
 
@@ -14,6 +14,7 @@ An unauthenticated financial intelligence dashboard with four routed views: Exec
 - Reconciliation lists the deterministic transaction queue and mismatch variance.
 - Cash Flow renders 90 days of actual daily income, expenses, net flow, and cumulative balance plus selectable 7/30/90-day forecasts.
 - AI CFO provides session-only chat, fresh daily insights, facts, predictions, reasoning, recommendations, and data citations from read-only financial tools.
+- Connect Financial Sources analyzes, maps, previews, imports, traces, and reconciles bank, payment gateway, accounting, and marketplace CSV files in a workspace separate from Demo Mode data.
 - `python backend/generate_data.py` replaces only the synthetic merchant tables with at least 20,000 deterministic payments and proportionate related records.
 - `/api/datasets/*` exposes paginated read endpoints plus a summary of counts and anomalies. Filters are available for common statuses, methods, categories, and anomaly types.
 
@@ -42,6 +43,12 @@ The read-only tool registry exposes `get_revenue`, `get_expenses`, `get_cash_bal
 ## Demo Mode
 
 The global presentation scenario is persisted in the single-row SQLite `demo_scenario_state` table. `GET /api/demo/scenarios` returns Healthy Business, Revenue Decline, Payment Failure Spike, Cash Flow Risk, Settlement Discrepancy, and High Refund Rate. `POST /api/demo/scenarios/{scenario_id}/activate` atomically replaces only synthetic merchant tables with a deterministic 20,000-payment scenario, then records the active state. Healthy Business is the baseline/reset. Because scenarios regenerate the same relational tables, Executive Dashboard, Reconciliation, Cash Flow, AI CFO, and dataset APIs all continue through their existing calculation pipelines rather than receiving hard-coded UI numbers.
+
+## Universal Financial Data Import
+
+Imports are isolated from synthetic Demo Mode tables. `/api/imports/analyze` accepts CSV files up to 25 MB and 100,000 rows for `bank`, `payment_gateway`, `accounting`, or `marketplace`, detects common headers, stores every untouched raw row with its batch/file hash and source row number, and returns a normalized preview. Mappings can be corrected at `PUT /api/imports/{batch_id}/mapping`; import and automatic reconciliation run at `POST /api/imports/{batch_id}/import`; `POST /api/imports/{batch_id}/reconcile` reruns matching; batch, workspace, and traceable transaction reads are available under `/api/imports`.
+
+The internal imported transaction model stores source/batch lineage, external ID, reference, date, integer-paise amount, direction, currency, description, counterparty, status, fingerprint, and duplicate link. Duplicate detection is source-scoped and deterministic. Cross-source matching prioritizes shared IDs/references, then exact amount/date, then equal amount within ±2 days. Shared-reference amount differences become `AMOUNT_MISMATCH`; equal amounts outside the window become `DATE_MISMATCH`; remaining records are `UNMATCHED`. Every result records its rule, confidence, matched transaction, differences, reason, and reconciliation timestamp.
 
 ## Auth and roles
 

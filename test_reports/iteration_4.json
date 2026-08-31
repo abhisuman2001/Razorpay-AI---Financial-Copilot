@@ -1,0 +1,66 @@
+{
+  "summary": "8 checks passed (7 backend test files / 13 test functions covering all 7 API-bearing import/reconciliation criteria, plus 1 browser check covering the full frontend Connect Financial Sources workflow via the public APP_URL). No bugs found. Healthy Business demo scenario remained active throughout and was unaffected by CSV import/reconciliation.",
+  "passed": 8,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Four universal CSV source types and limits are supported",
+      "name": "test_tscheck_csv_import_source_types_and_limits.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/imports/analyze -> 200 for bank/payment_gateway/accounting/marketplace with matching batch.source_type and row_count=1; empty file -> 422 'CSV file is empty'; 25MB+2KB payload -> 422 '25 MB limit'; 100,001-row CSV -> 422 '100,000 row limit'"
+    },
+    {
+      "criterion": "Columns are auto-detected and manually mappable",
+      "name": "test_tscheck_column_mapping_detection_and_validation.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "analyze suggestions detected 'Txn Date'->date and 'Amount (INR)'->amount with confidence>0 and auto-applied mapping; PUT /api/imports/{id}/mapping with full manual mapping -> 200 reflecting Counterparty/Notes columns; PUT with no date/amount -> 422; PUT referencing a nonexistent column -> 422"
+    },
+    {
+      "criterion": "Rows normalize into one internal transaction model",
+      "name": "test_tscheck_transaction_normalization.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Preview and imported /api/imports/{id}/transactions normalized 'Rs. 1,234.50' -> 123450 paise credit 2024-01-05 and '(500.75)' -> 50075 paise debit; currency uppercased to INR; description/status/counterparty/reference/external_id all carried through consistently between preview and post-import transaction views"
+    },
+    {
+      "criterion": "Duplicate transactions are detected deterministically",
+      "name": "test_tscheck_duplicate_detection.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "CSV with a repeated Transaction ID imported -> exactly one row returned by /api/imports/{id}/transactions?match_status=DUPLICATE with match_rule=SOURCE_FINGERPRINT, confidence=100.0, and duplicate_of_id pointing at the original (non-duplicate) transaction id"
+    },
+    {
+      "criterion": "Deterministic reconciliation identifies all requested outcomes",
+      "name": "test_tscheck_reconciliation_outcomes.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Complementary bank+payment_gateway CSVs imported -> reference-matched pair MATCHED (rule EXACT_REFERENCE, confidence 100); differing amount pair AMOUNT_MISMATCH (rule EXACT_REFERENCE_AMOUNT_DIFFERENCE, amount_difference=5000 paise); 9-day date gap pair DATE_MISMATCH (rule EXACT_REFERENCE_DATE_DIFFERENCE, date_difference_days=9); lone bank row UNMATCHED (rule NO_DETERMINISTIC_MATCH, confidence 0); all rows carry non-empty reason text; gateway-side rows mirror the same outcome"
+    },
+    {
+      "criterion": "Every normalized transaction is traceable to original source information",
+      "name": "test_tscheck_transaction_traceability.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "batch.file_sha256 from analyze/workspace responses matched a locally computed sha256 of the uploaded bytes; imported transaction exposed batch_id, source_type, source_row_number=2, match_status/match_rule/confidence, and original_data containing the untouched CSV header/value pairs (Transaction ID, Reference, Date, Amount, Type, Description)"
+    },
+    {
+      "criterion": "Import workspace remains separate from Demo Mode data",
+      "name": "test_tscheck_import_workspace_isolated_from_demo.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Captured /api/demo/scenarios active_scenario_id, /api/executive/dashboard metrics, /api/datasets/summary counts, and /api/forecast/30 forecasted_balance before and after a full CSV analyze->mapping->import->reconcile cycle; all four snapshots were byte-for-byte identical after the import"
+    },
+    {
+      "criterion": "The full frontend workflow is usable",
+      "name": "import-workflow-upload-mapping-reconcile-trace",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Run against public URL https://cash-intel.preview.emergentagent.com/connect: source-type-select lists bank/payment_gateway/accounting/marketplace; uploaded generated CSV -> Analyze CSV -> column-mapping-section shown with auto-detected Date/Amount selects and an edited Description mapping -> Apply mapping -> preview rows visible -> Import & Reconcile -> reconciliation results (3 unmatched, toast 'Imported 3 rows and reconciled 40 workspace transactions') -> match filter set to UNMATCHED and back to ALL -> Trace panel opened showing normalized values, match evidence, and original source fields -> closed -> Reconcile again clicked and results re-rendered. Header still showed 'Demo Mode · Healthy Business' unchanged throughout."
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Activity, Bot, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, LayoutDashboard, ListChecks, LoaderCircle, Menu, Presentation, RefreshCw } from "lucide-react";
+import { Activity, Bot, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, DatabaseZap, LayoutDashboard, ListChecks, LoaderCircle, Menu, Presentation, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ const navItems = [
   { to: "/reconciliation", label: "Reconciliation", icon: ListChecks },
   { to: "/forecast", label: "Cash flow", icon: ChartNoAxesCombined },
   { to: "/cfo", label: "AI CFO", icon: Bot },
+  { to: "/connect", label: "Connect sources", icon: DatabaseZap },
 ];
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
