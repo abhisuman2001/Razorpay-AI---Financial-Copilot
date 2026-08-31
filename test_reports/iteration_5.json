@@ -1,0 +1,66 @@
+{
+  "summary": "10 checks passed (3 backend test files / 15 test functions covering all 6 API-bearing Why-explanation criteria, plus 2 browser checks covering the 2 UI-facing criteria: Executive Dashboard Why drawers and detail-page Why interactions on Reconciliation/Cash Flow/AI CFO). No bugs found. Healthy Business remained active and all 7 Why endpoints returned exactly 4 ranked drivers as expected.",
+  "passed": 10,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Every requested major metric has a backend Why explanation",
+      "name": "test_tscheck_why_contract_and_periods.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/why/{revenue,cash_balance,settlement_amount,refund_rate,payment_success_rate,forecasted_balance,reconciliation_exceptions} all -> 200 with complete WhyMetricResponse contract (metric_label, classification, as_of_date, current_period, comparison_period, change_summary, drivers, explanation, explanation_mode, methodology, source_refs, drilldown_path all present and non-empty); GET /api/why/not_a_real_metric -> 404"
+    },
+    {
+      "criterion": "Underlying contributors are deterministic and ranked",
+      "name": "test_tscheck_why_contract_and_periods.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "For all 7 metrics, drivers[] length is between 1-4 and sorted by impact_score descending; every driver has current/previous values, unit, change_amount/percent/summary, direction in {increased,decreased,unchanged}, effect in {positive,negative,neutral}, classification, and non-empty source_metrics; seeded dataset confirmed exactly 4 drivers per metric"
+    },
+    {
+      "criterion": "AI CFO prose never invents contributors or financial numbers",
+      "name": "test_tscheck_why_prose_grounded.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "For all 7 metrics, every driver.label from drivers[] appears verbatim in explanation text and no unrelated metric label leaks in; every driver.change_summary and the top-level change_summary appear verbatim in the prose (render_why_explanation only echoes supplied structured fields); prose starts with 'Fact:' for fact metrics and 'Prediction:' for forecasted_balance"
+    },
+    {
+      "criterion": "Comparison periods and methodologies are explicit",
+      "name": "test_tscheck_why_contract_and_periods.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Fact metrics (revenue/settlement/refund/payment-success/reconciliation) use ' to ' calendar-month range phrasing for current_period/comparison_period; cash_balance uses 'Balance as of <date>' month-end phrasing; forecasted_balance current_period contains '30 days' and comparison_period contains 'Recorded balance'; every response has non-empty methodology and source_refs"
+    },
+    {
+      "criterion": "Facts and predictions are clearly distinguished",
+      "name": "test_tscheck_why_contract_and_periods.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "revenue/cash_balance/settlement_amount/refund_rate/payment_success_rate/reconciliation_exceptions all classification='fact' with all drivers classification='fact'; forecasted_balance classification='prediction' with all 4 drivers classification='prediction'"
+    },
+    {
+      "criterion": "Executive Dashboard metrics open grounded Why drawers",
+      "name": "executive-dashboard-why-drawers",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "On public URL '/': clicked Why buttons for revenue, current_balance, cash_forecast, and reconciliation_exceptions; each opened why-metric-panel with why-current-value/why-previous-value/why-change-summary, non-empty why-explanation-text, 1-4 driver articles, why-methodology block, and why-drilldown-link href matching expected drilldown_path (/cfo, /forecast, /forecast, /reconciliation respectively)"
+    },
+    {
+      "criterion": "Relevant detail pages expose Why interactions",
+      "name": "detail-pages-why-interactions",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "On /reconciliation: settlement-amount-why-button opened panel titled 'Settlement amount'. On /forecast: exactly 2 Why buttons found (forecast-current-card, forecast-ending-card i.e. Current Cash and Forecasted Balance), both opened the shared panel. On /cfo: refund-rate-signal-why-button opened panel titled 'Refund rate'; payment-success-signal-why-button opened panel titled 'Payment success rate'"
+    },
+    {
+      "criterion": "Why calculations remain in the backend pipeline",
+      "name": "test_tscheck_why_matches_backend_pipeline.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/why/revenue current_value (334708747) == GET /api/cfo/tools/get_revenue current_month_revenue; GET /api/why/refund_rate current_value (3.16) == GET /api/cfo/tools/get_refunds refund_rate_percent; GET /api/why/forecasted_balance current_value/previous_value == GET /api/forecast/30 forecasted_balance/current_cash_balance; repeated calls to /api/why/settlement_amount returned byte-identical values and drivers; scanned WhyMetricSheet.tsx for hard-coded 5+ digit literals (none found) and confirmed values render from data.current_value/data.drivers/data.explanation"
+    }
+  ]
+}

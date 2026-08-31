@@ -1,12 +1,13 @@
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowRight, Bot, CheckCircle2, CircleAlert, Clock3, Database, Eraser, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { ArrowRight, Bot, CheckCircle2, CircleAlert, Clock3, Database, Eraser, HelpCircle, RotateCcw, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 
+import WhyMetricSheet from "@/components/WhyMetricSheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiPost } from "@/lib/api";
-import type { CfoChatRequest, CfoChatResponse, DailyInsight, DailyInsightsResponse } from "@/lib/types";
+import type { CfoChatRequest, CfoChatResponse, DailyInsight, DailyInsightsResponse, WhyMetricId, WhyMetricResponse } from "@/lib/types";
 
 const prompts = [
   "What should I be concerned about today?",
@@ -25,11 +26,14 @@ interface ConversationItem {
 export default function Cfo() {
   const [question, setQuestion] = useState("");
   const [conversation, setConversation] = useState<ConversationItem[]>([]);
+  const [whyMetric, setWhyMetric] = useState<WhyMetricId | null>(null);
   const insightsQuery = useQuery({
     queryKey: ["cfo", "daily-insights"],
     queryFn: () => apiGet<DailyInsightsResponse>("/cfo/insights"),
     retry: false,
   });
+  const refundWhy = useQuery({ queryKey: ["why", "refund_rate"], queryFn: () => apiGet<WhyMetricResponse>("/why/refund_rate"), retry: false });
+  const successWhy = useQuery({ queryKey: ["why", "payment_success_rate"], queryFn: () => apiGet<WhyMetricResponse>("/why/payment_success_rate"), retry: false });
   const chat = useMutation({
     mutationFn: (input: CfoChatRequest) => apiPost<CfoChatResponse>("/cfo/chat", input),
     onSuccess: (response) => {
@@ -55,6 +59,8 @@ export default function Cfo() {
         <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700" data-testid="cfo-engine-status"><ShieldCheck size={15} />Deterministic mode · Ollama ready</div>
       </section>
 
+      <section className="grid gap-4 sm:grid-cols-2" data-testid="cfo-operating-signals"><WhySignal title="Refund rate" data={refundWhy.data} loading={refundWhy.isLoading} icon={<RotateCcw size={17} />} onExplain={() => setWhyMetric("refund_rate")} testId="refund-rate-signal" /><WhySignal title="Payment success rate" data={successWhy.data} loading={successWhy.isLoading} icon={<CheckCircle2 size={17} />} onExplain={() => setWhyMetric("payment_success_rate")} testId="payment-success-signal" /></section>
+
       <section data-testid="cfo-daily-insights-section">
         <div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400" data-testid="cfo-daily-insights-eyebrow">Generated today</p><h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-slate-900" data-testid="cfo-daily-insights-title">Daily financial brief</h2></div>{insights && <p className="font-mono text-[10px] text-slate-400" data-testid="cfo-insights-as-of">As of {insights.as_of_date}</p>}</div>
         {insightsQuery.isError ? <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800" data-testid="cfo-insights-error">Daily insights are unavailable. The chat workspace remains visible.</div> : insights ? <><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5" data-testid="cfo-insights-grid">{insights.insights.map((insight) => <InsightCard key={insight.id} insight={insight} onAsk={() => ask(questionForInsight(insight))} />)}</div><p className="mt-3 text-[10px] leading-5 text-slate-400" data-testid="cfo-insights-disclaimer">{insights.disclaimer}</p></> : <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500" data-testid="cfo-insights-loading">Running read-only financial tools…</div>}
@@ -79,9 +85,12 @@ export default function Cfo() {
           <form onSubmit={submit} className="border-t border-slate-100 bg-white p-4 sm:p-5" data-testid="cfo-chat-form"><div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm focus-within:border-rose-300 focus-within:ring-2 focus-within:ring-rose-50"><Textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about revenue, settlements, cash, risks, customers…" maxLength={600} rows={2} className="min-h-16 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0" data-testid="cfo-chat-input" /><div className="flex items-center justify-between gap-3 px-2 pb-1"><p className="text-[10px] text-slate-400" data-testid="cfo-chat-input-note">Financial context is selected on the server</p><Button type="submit" disabled={question.trim().length < 3 || chat.isPending} className="bg-rose-600 text-white hover:bg-rose-700" data-testid="cfo-chat-submit-button">{chat.isPending ? "Analyzing…" : "Ask CFO"}<Send size={14} /></Button></div></div></form>
         </div>
       </section>
+      <WhyMetricSheet metricId={whyMetric} open={Boolean(whyMetric)} onOpenChange={(open) => { if (!open) setWhyMetric(null); }} />
     </div>
   );
 }
+
+function WhySignal({ title, data, loading, icon, onExplain, testId }: { title: string; data?: WhyMetricResponse; loading: boolean; icon: ReactNode; onExplain: () => void; testId: string }) { return <div className="rounded-lg border border-slate-200 bg-white p-5" data-testid={testId}><div className="flex items-start justify-between"><div><p className="text-xs font-medium text-slate-400" data-testid={`${testId}-label`}>{title}</p><p className="mt-3 font-mono text-2xl font-medium text-slate-900" data-testid={`${testId}-value`}>{loading || !data ? "—" : `${data.current_value.toFixed(2)}%`}</p><p className="mt-1 text-[10px] text-slate-500" data-testid={`${testId}-change`}>{data ? `${data.direction} ${data.change_summary} vs previous month` : "Calculating drivers…"}</p></div><span className="flex h-9 w-9 items-center justify-center rounded-md bg-rose-50 text-rose-600">{icon}</span></div><button type="button" onClick={onExplain} disabled={!data} className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-700 disabled:opacity-40" data-testid={`${testId}-why-button`}><HelpCircle size={12} />Why?</button></div>; }
 
 function questionForInsight(insight: DailyInsight) { const questions: Record<string, string> = { Reconciliation: "Show me my biggest reconciliation problems.", "Cash flow": "Will I have enough cash next month?", Revenue: "Why did revenue fall this month?", "Payment failures": "Why are payments failing this month?", Refunds: "What is driving refunds this month?" }; return questions[insight.category] ?? "What should I be concerned about today?"; }
 

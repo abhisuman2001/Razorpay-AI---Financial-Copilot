@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowDownLeft, ArrowUpRight, Banknote, CircleAlert, Info, ShieldCheck, TrendingUp } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Banknote, CircleAlert, HelpCircle, Info, ShieldCheck, TrendingUp } from "lucide-react";
 
+import WhyMetricSheet from "@/components/WhyMetricSheet";
 import { apiGet } from "@/lib/api";
 import { formatDate, formatPaiseINR } from "@/lib/format";
-import type { CashFlowForecastResponse, ForecastRisk } from "@/lib/types";
+import type { CashFlowForecastResponse, ForecastRisk, WhyMetricId } from "@/lib/types";
 
 type Horizon = 7 | 30 | 90;
 
@@ -20,6 +21,7 @@ interface ChartPoint {
 
 export default function Forecast() {
   const [horizon, setHorizon] = useState<Horizon>(30);
+  const [whyMetric, setWhyMetric] = useState<WhyMetricId | null>(null);
   const query = useQuery({
     queryKey: ["forecast", horizon],
     queryFn: () => apiGet<CashFlowForecastResponse>(`/forecast/${horizon}`),
@@ -46,10 +48,10 @@ export default function Forecast() {
 
       {query.isError ? <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800" data-testid="forecast-data-error">The statistical forecast service is unavailable. The dashboard shell remains available.</div> : data ? <>
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="forecast-summary-cards">
-          <ForecastMetric label="Current cash balance" value={formatPaiseINR(data.current_cash_balance, true)} detail={`As of ${formatDate(data.as_of_date)}`} icon={<Banknote size={16} />} testId="forecast-current-card" />
+          <ForecastMetric label="Current cash balance" value={formatPaiseINR(data.current_cash_balance, true)} detail={`As of ${formatDate(data.as_of_date)}`} icon={<Banknote size={16} />} testId="forecast-current-card" onExplain={() => setWhyMetric("cash_balance")} />
           <ForecastMetric label="Expected incoming" value={formatPaiseINR(data.expected_incoming, true)} detail={`Next ${data.horizon_days} days`} icon={<ArrowDownLeft size={16} />} testId="forecast-incoming-card" tone="green" />
           <ForecastMetric label="Expected outgoing" value={formatPaiseINR(data.expected_outgoing, true)} detail={`Next ${data.horizon_days} days`} icon={<ArrowUpRight size={16} />} testId="forecast-outgoing-card" tone="amber" />
-          <ForecastMetric label="Forecasted balance" value={formatPaiseINR(data.forecasted_balance, true)} detail={`End of ${data.horizon_days}-day horizon`} icon={<TrendingUp size={16} />} testId="forecast-ending-card" tone="red" />
+          <ForecastMetric label="Forecasted balance" value={formatPaiseINR(data.forecasted_balance, true)} detail={`End of ${data.horizon_days}-day horizon`} icon={<TrendingUp size={16} />} testId="forecast-ending-card" tone="red" onExplain={() => setWhyMetric("forecasted_balance")} />
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white" data-testid="forecast-chart-card">
@@ -60,11 +62,12 @@ export default function Forecast() {
 
         <section data-testid="forecast-risks-section"><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-600" data-testid="forecast-risks-eyebrow">Watchlist</p><h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-slate-900" data-testid="forecast-risks-title">Important forecast risks</h2></div><p className="hidden text-xs text-slate-400 sm:block" data-testid="forecast-risks-source">Deterministic backend rules</p></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-testid="forecast-risks-grid">{data.risks.map((risk) => <RiskCard key={risk.id} risk={risk} />)}</div></section>
       </> : <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm text-slate-500" data-testid="forecast-loading">Fitting daily income and expense models…</div>}
+      <WhyMetricSheet metricId={whyMetric} open={Boolean(whyMetric)} onOpenChange={(open) => { if (!open) setWhyMetric(null); }} />
     </div>
   );
 }
 
-function ForecastMetric({ label, value, detail, icon, testId, tone = "slate" }: { label: string; value: string; detail: string; icon: ReactNode; testId: string; tone?: "slate" | "green" | "amber" | "red" }) { const tones = { slate: "text-slate-500", green: "text-emerald-500", amber: "text-amber-500", red: "text-rose-600" }; return <div className="rounded-lg border border-slate-200 bg-white p-4 transition-transform hover:-translate-y-0.5 hover:shadow-sm" data-testid={testId}><div className="flex items-center justify-between"><p className="text-xs text-slate-400" data-testid={`${testId}-label`}>{label}</p><span className={tones[tone]}>{icon}</span></div><p className="mt-4 font-mono text-xl font-medium text-slate-900" data-testid={`${testId}-value`}>{value}</p><p className="mt-1 text-[11px] text-slate-500" data-testid={`${testId}-detail`}>{detail}</p></div>; }
+function ForecastMetric({ label, value, detail, icon, testId, tone = "slate", onExplain }: { label: string; value: string; detail: string; icon: ReactNode; testId: string; tone?: "slate" | "green" | "amber" | "red"; onExplain?: () => void }) { const tones = { slate: "text-slate-500", green: "text-emerald-500", amber: "text-amber-500", red: "text-rose-600" }; return <div className="rounded-lg border border-slate-200 bg-white p-4 transition-transform hover:-translate-y-0.5 hover:shadow-sm" data-testid={testId}><div className="flex items-center justify-between"><p className="text-xs text-slate-400" data-testid={`${testId}-label`}>{label}</p><span className={tones[tone]}>{icon}</span></div><p className="mt-4 font-mono text-xl font-medium text-slate-900" data-testid={`${testId}-value`}>{value}</p><div className="mt-1 flex items-center justify-between gap-2"><p className="text-[11px] text-slate-500" data-testid={`${testId}-detail`}>{detail}</p>{onExplain && <button type="button" onClick={onExplain} className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-700" data-testid={`${testId}-why-button`}><HelpCircle size={11} />Why?</button>}</div></div>; }
 function Legend({ color, label, testId }: { color: string; label: string; testId: string }) { return <span className="flex items-center gap-1.5" data-testid={testId}><span className={`h-2 w-2 rounded-full ${color}`} />{label}</span>; }
 function RiskCard({ risk }: { risk: ForecastRisk }) { const style = { high: "bg-rose-50 text-rose-700", medium: "bg-amber-50 text-amber-700", low: "bg-emerald-50 text-emerald-700" }[risk.severity]; return <article className="rounded-lg border border-slate-200 bg-white p-5 transition-transform hover:-translate-y-0.5 hover:shadow-sm" data-testid={`forecast-risk-${risk.id}`}><div className="flex items-center justify-between"><span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide ${style}`} data-testid={`forecast-risk-severity-${risk.id}`}>{risk.severity}</span><CircleAlert size={14} className="text-slate-300" /></div><p className="mt-4 text-[10px] font-bold uppercase tracking-[0.13em] text-slate-400" data-testid={`forecast-risk-category-${risk.id}`}>{risk.category}</p><h3 className="mt-2 font-heading text-sm font-bold leading-5 text-slate-900" data-testid={`forecast-risk-title-${risk.id}`}>{risk.title}</h3><p className="mt-2 text-xs leading-5 text-slate-500" data-testid={`forecast-risk-description-${risk.id}`}>{risk.description}</p><div className="mt-5 border-t border-slate-100 pt-4"><p className="text-[10px] text-slate-400" data-testid={`forecast-risk-metric-label-${risk.id}`}>{risk.metric_label}</p><p className="mt-1 font-mono text-base font-medium text-slate-900" data-testid={`forecast-risk-metric-value-${risk.id}`}>{risk.metric_value}</p><p className="mt-2 text-[9px] text-slate-400" data-testid={`forecast-risk-source-${risk.id}`}>{risk.source}</p></div></article>; }
 function CashFlowTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value?: number; dataKey?: string }>; label?: string }) { if (!active || !payload?.length) return null; const labels: Record<string, string> = { actual_balance: "Actual balance", predicted_balance: "Predicted balance", balance_lower: "Lower bound", balance_upper: "Upper bound" }; return <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg" data-testid="forecast-tooltip"><p className="mb-1.5 text-slate-400" data-testid="forecast-tooltip-date">{label}</p>{payload.map((entry) => <p key={entry.dataKey} className="font-mono font-medium text-slate-800" data-testid={`forecast-tooltip-${entry.dataKey}`}>{labels[entry.dataKey ?? ""]}: {formatPaiseINR(entry.value ?? 0)}</p>)}</div>; }

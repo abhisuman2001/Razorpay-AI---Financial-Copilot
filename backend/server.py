@@ -14,6 +14,7 @@ from routers.cfo import router as cfo_router
 from routers.executive import router as executive_router
 from routers.demo import router as demo_router
 from routers.imports import router as imports_router
+from routers.why import router as why_router
 
 
 ROOT_DIR = Path(__file__).parent
@@ -47,6 +48,7 @@ api_router.include_router(cfo_router)
 api_router.include_router(executive_router)
 api_router.include_router(demo_router)
 api_router.include_router(imports_router)
+api_router.include_router(why_router)
 
 app.add_middleware(
     CORSMiddleware,

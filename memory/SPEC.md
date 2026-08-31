@@ -50,6 +50,10 @@ Imports are isolated from synthetic Demo Mode tables. `/api/imports/analyze` acc
 
 The internal imported transaction model stores source/batch lineage, external ID, reference, date, integer-paise amount, direction, currency, description, counterparty, status, fingerprint, and duplicate link. Duplicate detection is source-scoped and deterministic. Cross-source matching prioritizes shared IDs/references, then exact amount/date, then equal amount within ±2 days. Shared-reference amount differences become `AMOUNT_MISMATCH`; equal amounts outside the window become `DATE_MISMATCH`; remaining records are `UNMATCHED`. Every result records its rule, confidence, matched transaction, differences, reason, and reconciliation timestamp.
 
+## Why explainability
+
+`GET /api/why/{metric_id}` supports revenue, cash balance, settlement amount, refund rate, payment success rate, forecasted balance, and reconciliation exceptions. The deterministic analytics layer compares current and previous calendar months (or current vs 30-day prediction for forecasted balance), calculates candidate contributors, assigns direction/effect/impact, ranks the top four, and attaches source metrics. Only those structured findings are passed to the AI CFO deterministic renderer, which performs no financial calculation and cannot add contributors. Responses label facts vs predictions, include the concise explanation, methodology, periods, source references, and detailed driver values.
+
 ## Auth and roles
 
 No auth or roles in this cost-zero prototype. No credentials are seeded.

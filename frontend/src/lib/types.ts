@@ -583,3 +583,52 @@ export interface ImportedTransactionPage {
   limit: number;
   offset: number;
 }
+
+export type WhyMetricId =
+  | "revenue"
+  | "cash_balance"
+  | "settlement_amount"
+  | "refund_rate"
+  | "payment_success_rate"
+  | "forecasted_balance"
+  | "reconciliation_exceptions";
+
+export interface DriverFinding {
+  id: string;
+  label: string;
+  description: string;
+  current_value: number;
+  previous_value: number;
+  unit: "currency" | "percent" | "count";
+  change_amount: number;
+  change_percent: number | null;
+  change_summary: string;
+  direction: "increased" | "decreased" | "unchanged";
+  effect: "positive" | "negative" | "neutral";
+  impact_score: number;
+  classification: "fact" | "prediction";
+  source_metrics: string[];
+}
+
+export interface WhyMetricResponse {
+  metric_id: WhyMetricId;
+  metric_label: string;
+  classification: "fact" | "prediction";
+  as_of_date: string;
+  current_period: string;
+  comparison_period: string;
+  current_value: number;
+  previous_value: number;
+  unit: "currency" | "percent" | "count";
+  change_amount: number;
+  change_percent: number | null;
+  change_summary: string;
+  direction: "increased" | "decreased" | "unchanged";
+  drivers: DriverFinding[];
+  explanation: string;
+  explanation_mode: string;
+  methodology: string;
+  source_refs: string[];
+  drilldown_path: string;
+  insufficient_data: boolean;
+}

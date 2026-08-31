@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, CalendarDays, Check, CircleAlert, Clock3, Equal, Filter, Search, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Check, CircleAlert, Clock3, Equal, Filter, HelpCircle, Search, ShieldCheck, X } from "lucide-react";
 
+import WhyMetricSheet from "@/components/WhyMetricSheet";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { apiGet } from "@/lib/api";
 import { formatDate, formatPaiseINR } from "@/lib/format";
@@ -32,6 +33,7 @@ export default function Reconciliation() {
   const [dateTo, setDateTo] = useState("");
   const [offset, setOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [settlementWhyOpen, setSettlementWhyOpen] = useState(false);
 
   const dateQuery = queryString({ date_from: dateFrom, date_to: dateTo });
   const summaryQuery = useQuery({
@@ -72,7 +74,7 @@ export default function Reconciliation() {
           <h1 className="font-heading text-3xl font-bold tracking-[-0.04em] text-slate-950" data-testid="reconciliation-title">Expected vs actual</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-500" data-testid="reconciliation-description">Exact-paise settlement checks, calculated deterministically from payments, refunds, fees, and taxes.</p>
         </div>
-        <div className="inline-flex items-center gap-2 self-start rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700" data-testid="reconciliation-engine-status"><ShieldCheck size={15} />Deterministic engine · no AI math</div>
+        <div className="flex flex-wrap gap-2 self-start"><button type="button" onClick={() => setSettlementWhyOpen(true)} className="inline-flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100" data-testid="settlement-amount-why-button"><HelpCircle size={14} />Why settlement amount?</button><div className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700" data-testid="reconciliation-engine-status"><ShieldCheck size={15} />Deterministic engine · no AI math</div></div>
       </section>
 
       {summaryQuery.isError ? <DataError /> : summary ? <>
@@ -122,6 +124,7 @@ export default function Reconciliation() {
           {detailQuery.isLoading ? <Loading label="Loading transaction detail…" /> : detailQuery.data ? <DetailPanel item={detailQuery.data} /> : <div className="p-6 text-sm text-amber-700" data-testid="reconciliation-detail-error">Transaction detail is unavailable.</div>}
         </SheetContent>
       </Sheet>
+      <WhyMetricSheet metricId="settlement_amount" open={settlementWhyOpen} onOpenChange={setSettlementWhyOpen} />
     </div>
   );
 }

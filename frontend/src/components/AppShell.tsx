@@ -57,6 +57,7 @@ export default function AppShell() {
     await queryClient.invalidateQueries({ queryKey: ["reconciliation"] });
     await queryClient.invalidateQueries({ queryKey: ["forecast"] });
     await queryClient.invalidateQueries({ queryKey: ["cfo"] });
+    await queryClient.invalidateQueries({ queryKey: ["why"] });
   };
 
   return (
