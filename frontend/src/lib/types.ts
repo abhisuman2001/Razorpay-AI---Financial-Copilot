@@ -331,3 +331,63 @@ export interface CashFlowForecastResponse {
   forecast: PredictedCashFlowPoint[];
   risks: ForecastRisk[];
 }
+
+export interface FinancialToolResult {
+  tool_name: string;
+  classification: "fact" | "prediction";
+  period_label: string;
+  generated_at: string;
+  data: Record<string, unknown>;
+  source_refs: string[];
+  insufficient_data: boolean;
+}
+
+export interface CfoSource {
+  id: string;
+  tool_name: string;
+  label: string;
+  classification: "fact" | "prediction";
+  period: string;
+}
+
+export interface CfoChatRequest {
+  question: string;
+}
+
+export interface CfoChatResponse {
+  id: string;
+  question: string;
+  answer: string;
+  mode: "deterministic" | "ollama" | "deterministic_fallback";
+  facts: string[];
+  predictions: string[];
+  reasoning: string[];
+  recommendations: string[];
+  sources: CfoSource[];
+  tools_used: string[];
+  insufficient_data: boolean;
+  read_only: boolean;
+  provider_message: string;
+}
+
+export interface DailyInsight {
+  id: string;
+  category: string;
+  severity: "high" | "medium" | "low";
+  title: string;
+  summary: string;
+  metric_label: string;
+  metric_value: string;
+  classification: "fact" | "prediction";
+  source_tool: string;
+  source_ref: string;
+  action: string;
+}
+
+export interface DailyInsightsResponse {
+  as_of_date: string;
+  generated_at: string;
+  mode: "deterministic" | "ollama" | "deterministic_fallback";
+  disclaimer: string;
+  insights: DailyInsight[];
+}

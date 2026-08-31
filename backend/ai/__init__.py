@@ -1,0 +1,1 @@
+"""Provider-neutral AI explanation layer. Financial calculations live elsewhere."""

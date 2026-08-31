@@ -1,0 +1,80 @@
+{
+  "summary": "19 backend tests passed (7 files) covering all 8 acceptance criteria at the API layer; 3 browser checks passed covering the 3 UI-facing criteria (chat flow, daily insights, public ingress URL). No bugs found.",
+  "passed": 10,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "All ten requested financial tools are available and deterministic",
+      "name": "test_tscheck_ten_financial_tools.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/cfo/tools/{tool} for all 10 tools -> 200 with tool_name/classification/period_label/non-empty data/source_refs; repeat call to get_revenue returned identical current_month_revenue and payment_method_mix; GET /api/cfo/tools/get_nonexistent_tool -> 404"
+    },
+    {
+      "criterion": "AI CFO chat selects only relevant backend tools",
+      "name": "test_tscheck_chat_tool_selection.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/cfo/chat: cash question -> tools_used includes get_cash_balance/get_cashflow_forecast; revenue question -> get_revenue; reconciliation question -> get_reconciliation_exceptions/get_settlement_summary; risk question -> failed_payments/refunds family; customer question -> get_top_customers/get_customer_statistics"
+    },
+    {
+      "criterion": "Answers distinguish facts from predictions and explain reasoning",
+      "name": "test_tscheck_facts_predictions_reasoning.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/cfo/chat cash-forecast question -> 200 with non-empty facts[], predictions[] (e.g. '30-day model forecasts...'), reasoning[], recommendations[]"
+    },
+    {
+      "criterion": "Answers are grounded and cite financial data",
+      "name": "test_tscheck_grounded_sources.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/cfo/chat -> sources[] each with tool_name in tools_used, classification fact/prediction, non-empty period/label; revenue figure from GET /api/cfo/tools/get_revenue matched figure quoted in chat answer/facts"
+    },
+    {
+      "criterion": "AI CFO is read-only and handles insufficient data safely",
+      "name": "test_tscheck_read_only_safety.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/cfo/chat -> read_only:true and insufficient_data boolean present; short question ('ok') -> 422 validation; DELETE /api/cfo/tools/get_revenue -> 404/405, PUT /api/cfo/chat -> 404/405 (no mutation verbs)"
+    },
+    {
+      "criterion": "Daily insights cover requested financial signals",
+      "name": "test_tscheck_daily_insights.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/cfo/insights -> categories cover Reconciliation, Cash flow, Revenue, Payment failures, Refunds; every insight has classification fact/prediction, source_tool, source_ref, severity"
+    },
+    {
+      "criterion": "Local Ollama is optional and zero-cost default works without it",
+      "name": "test_tscheck_deterministic_provider_default.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "AI_CFO_PROVIDER=deterministic in backend/.env; POST /api/cfo/chat -> mode deterministic, provider_message states Ollama disabled; GET /api/cfo/insights -> mode deterministic with disclaimer mentioning deterministic tools"
+    },
+    {
+      "criterion": "AI CFO chat is usable as a session-only frontend flow",
+      "name": "cfo-chat-flow-grounded-answer",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "On /cfo: empty state visible, clicked suggested question 'Why did revenue fall this month?' -> answer rendered with facts/predictions/reasoning sections, tool badges, read-only badge, source references; typed custom cash-forecast question -> second answer with predictions section; Clear button emptied conversation; page reload showed empty state again (no persisted history)"
+    },
+    {
+      "criterion": "Daily insights cover requested financial signals (UI)",
+      "name": "cfo-daily-insights-signals-visible",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Insights grid on /cfo rendered 5 cards with categories Reconciliation/Cash flow/Revenue/Payment failures/Refunds, each labeled fact or prediction, disclaimer visible; clicking an insight's action button triggered a grounded chat answer"
+    },
+    {
+      "criterion": "App reachable and AI CFO usable via public ingress URL",
+      "name": "cfo-page-loads-via-public-url",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Navigated to https://cash-intel.preview.emergentagent.com, clicked AI CFO nav link, page loaded, asked suggested question, assistant answer rendered"
+    }
+  ]
+}

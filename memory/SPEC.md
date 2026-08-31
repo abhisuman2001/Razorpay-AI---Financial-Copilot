@@ -13,7 +13,7 @@ An unauthenticated financial intelligence dashboard with four routed views: Over
 - Overview loads backend-owned cash, inflow, outflow, runway, reconciliation, forecast, and insight data.
 - Reconciliation lists the deterministic transaction queue and mismatch variance.
 - Cash Flow renders 90 days of actual daily income, expenses, net flow, and cumulative balance plus selectable 7/30/90-day forecasts.
-- AI CFO presents static, explainable recommendations sourced from backend calculations.
+- AI CFO provides session-only chat, fresh daily insights, facts, predictions, reasoning, recommendations, and data citations from read-only financial tools.
 - `python backend/generate_data.py` replaces only the synthetic merchant tables with at least 20,000 deterministic payments and proportionate related records.
 - `/api/datasets/*` exposes paginated read endpoints plus a summary of counts and anomalies. Filters are available for common statuses, methods, categories, and anomaly types.
 
@@ -28,6 +28,12 @@ Every injected anomaly has a row in `financial_anomalies` with its dataset run, 
 ## Statistical cash-flow forecast
 
 `/api/forecast/7`, `/api/forecast/30`, and `/api/forecast/90` use SQLite history only. Daily income is recognized from settled net cash on settlement dates; daily expenses come from booked expenses. Current balance equals configurable `OPENING_CASH_BALANCE_PAISE` plus all historical daily net cash flow. Separate additive Holt-Winters models apply a damped trend and weekly seasonality to income and expenses. Forecast responses include all predicted values, cumulative balance, an 80% residual-based balance range, methodology, and deterministic liquidity/concentration/volatility/expense risks. No LLM performs or adjusts numerical forecasting.
+
+## AI CFO architecture
+
+The read-only tool registry exposes `get_revenue`, `get_expenses`, `get_cash_balance`, `get_failed_payments`, `get_refunds`, `get_settlement_summary`, `get_reconciliation_exceptions`, `get_cashflow_forecast`, `get_top_customers`, and `get_customer_statistics`. Every tool returns structured, period-labeled JSON with source references and fact/prediction classification. `/api/cfo/chat` selects only relevant tools and returns grounded facts, predictions, reasoning, recommendations, and citations. `/api/cfo/insights` creates five fresh daily insights on request. `/api/cfo/tools/{tool_name}` makes tool output auditable.
+
+`AI_CFO_PROVIDER=deterministic` is the zero-cost default. An optional loopback-only Ollama adapter can be enabled later with `AI_CFO_PROVIDER=ollama`; it receives only selected structured tool context, has no write capability, and is guarded against unsupported numeric output. Provider failures or ungrounded output fall back deterministically. Chat history is held only in the browser session and is never written to SQLite.
 
 ## Auth and roles
 

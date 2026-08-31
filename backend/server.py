@@ -10,6 +10,7 @@ from routers.dashboard import router as dashboard_router
 from routers.datasets import router as datasets_router
 from routers.reconciliation import router as reconciliation_router
 from routers.forecast import router as forecast_router
+from routers.cfo import router as cfo_router
 
 
 ROOT_DIR = Path(__file__).parent
@@ -39,6 +40,7 @@ api_router.include_router(dashboard_router)
 api_router.include_router(datasets_router)
 api_router.include_router(reconciliation_router)
 api_router.include_router(forecast_router)
+api_router.include_router(cfo_router)
 
 app.add_middleware(
     CORSMiddleware,
