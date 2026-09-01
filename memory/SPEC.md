@@ -2,7 +2,7 @@
 
 ## Current MVP
 
-An unauthenticated financial intelligence workspace with Executive Overview, Reconciliation, Cash Flow, AI CFO, Demo Mode, and Connect Financial Sources. It uses SQLite through SQLAlchemy and exposes FastAPI endpoints under `/api`.
+An unauthenticated financial intelligence workspace with Executive Overview, Reconciliation, Cash Flow, AI CFO, Demo Mode, and Connect Financial Sources. It uses SQLite through SQLAlchemy and exposes FastAPI endpoints under `/api`. The account avatar opens a compact solid menu with a browser-persisted light/dark theme control and an explicitly demo-only logout confirmation that does not gate the workspace.
 
 ## Data model
 

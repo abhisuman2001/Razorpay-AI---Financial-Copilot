@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Activity, Bot, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, DatabaseZap, LayoutDashboard, ListChecks, LoaderCircle, Menu, Presentation, RefreshCw } from "lucide-react";
+import { Activity, Bot, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, DatabaseZap, LayoutDashboard, ListChecks, LoaderCircle, LogOut, Menu, Moon, Presentation, RefreshCw, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { apiGet, apiPost } from "@/lib/api";
@@ -25,11 +26,27 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? "bg-rose-50 text-rose-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
   }`;
 
+type AppTheme = "light" | "dark";
+const THEME_STORAGE_KEY = "razorpay-ai-theme";
+
+function initialTheme(): AppTheme {
+  if (typeof document === "undefined") return "light";
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
 export default function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
+  const [theme, setTheme] = useState<AppTheme>(initialTheme);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const dark = theme === "dark";
+    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
   const dashboard = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => apiGet<DashboardResponse>("/dashboard"),
@@ -58,6 +75,12 @@ export default function AppShell() {
     await queryClient.invalidateQueries({ queryKey: ["forecast"] });
     await queryClient.invalidateQueries({ queryKey: ["cfo"] });
     await queryClient.invalidateQueries({ queryKey: ["why"] });
+  };
+  const toggleTheme = () => setTheme((current) => current === "dark" ? "light" : "dark");
+  const logoutDemoSession = () => {
+    toast.success("Demo session ended", {
+      description: "This prototype has no sign-in yet, so the financial workspace remains accessible.",
+    });
   };
 
   return (
@@ -123,7 +146,34 @@ export default function AppShell() {
               <RefreshCw size={14} className={dashboard.isFetching ? "animate-spin" : ""} />
               <span className="hidden sm:inline">Refresh data</span>
             </button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-700" data-testid="header-user-avatar">AM</div>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-700 transition-[transform,background-color] hover:scale-105 hover:bg-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+                aria-label="Open account and theme menu"
+                data-testid="header-account-menu-button"
+              >
+                AM
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={8} className="w-56 p-1.5" data-testid="header-account-menu">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="px-2 py-2" data-testid="header-account-menu-profile">
+                    <span className="block text-xs font-bold text-slate-800" data-testid="header-account-menu-name">Aarav Mehta</span>
+                    <span className="mt-0.5 block text-[10px] font-normal text-slate-400" data-testid="header-account-menu-role">Finance lead · Demo workspace</span>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={toggleTheme} className="min-h-10 cursor-pointer px-2 py-2" data-testid="header-theme-toggle">
+                  {theme === "dark" ? <Sun className="text-amber-400" /> : <Moon className="text-slate-500" />}
+                  <span className="font-medium" data-testid="header-theme-toggle-label">Dark mode</span>
+                  <span className={`ml-auto rounded-full px-2 py-0.5 text-[9px] font-bold ${theme === "dark" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`} data-testid="header-theme-toggle-state">{theme === "dark" ? "On" : "Off"}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logoutDemoSession} className="min-h-10 cursor-pointer px-2 py-2 text-rose-700 focus:bg-rose-50 focus:text-rose-700" data-testid="header-logout-button">
+                  <LogOut />
+                  <span className="font-medium" data-testid="header-logout-label">Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

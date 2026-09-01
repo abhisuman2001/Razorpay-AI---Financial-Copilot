@@ -1,0 +1,55 @@
+{
+  "summary": "6 checks passed (0 failed) covering all 6 acceptance criteria for the account-menu / dark-mode / demo-logout feature. All UI-facing, so no backend test artifacts were needed. No bugs found; one screenshot-timing false-positive was diagnosed and ruled out during investigation (see notes).",
+  "passed": 6,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "notes": [
+    "During dark-mode verification, an initial screenshot taken immediately after toggling appeared to show a still-light dashboard even though computed styles already reported dark colors. Adding a double requestAnimationFrame wait before screenshotting confirmed this was a screenshot/paint timing artifact in the test script, not a real rendering bug -- the dashboard shell, sidebar, header, cards, and account menu all correctly switch to a dark palette (verified via computed backgroundColor on aside/header/root plus visual screenshots)."
+  ],
+  "checks": [
+    {
+      "criterion": "Clicking the top-right AM avatar opens a compact solid dropdown beneath it",
+      "name": "account-menu-opens-with-profile",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Clicked header-account-menu-button; header-account-menu became visible with header-account-menu-name='Aarav Mehta', header-account-menu-role containing 'Finance lead', header-theme-toggle-label='Dark mode', header-logout-label='Logout'; menu background-color was non-transparent (solid surface)"
+    },
+    {
+      "criterion": "The Dark mode menu action changes the whole financial dashboard theme",
+      "name": "dark-mode-changes-dashboard-theme",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "After clicking header-theme-toggle, html gained class 'dark'; computed backgroundColor of the app shell root (div.min-h-screen) = rgb(8,13,24), <aside> = rgb(17,24,39), <header> = rgb(17,24,39) -- all dark and none classified as light by luminance check; reopened account menu showed solid dark, non-transparent background and header-theme-toggle-state='On'"
+    },
+    {
+      "criterion": "Theme selection persists in the browser",
+      "name": "theme-persists-on-reload",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Enabled dark mode, then page.reload(); after reload html.dark class still present, localStorage['razorpay-ai-theme']==='dark', and computed backgroundColor of app shell root remained dark (luminance <200) confirming full dashboard re-renders dark post-reload"
+    },
+    {
+      "criterion": "The theme control can restore light mode",
+      "name": "dark-mode-toggle-restores-light",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "With dark mode on, clicked header-theme-toggle again; html.dark class removed, app shell root backgroundColor luminance >200 (light), and reopened menu showed header-theme-toggle-state='Off'"
+    },
+    {
+      "criterion": "Logout communicates the demo-only behavior selected by the user",
+      "name": "logout-shows-demo-session-ended",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Clicked header-logout-button; toast text 'Demo session ended' became visible; primary-navigation remained visible/usable and clicking nav-reconciliation successfully navigated to /reconciliation (workspace stayed accessible, no auth gate/redirect), matching the documented demo-only spec deviation"
+    },
+    {
+      "criterion": "Avatar menu and theme interactions remain stable",
+      "name": "avatar-menu-full-stability-flow",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Full sequence -- open menu, toggle dark, reload, reopen menu (state still 'On'), logout (toast shown) -- completed with zero pageerror/requestfailed events captured via page.on listeners; nav remained visible/interactive throughout"
+    }
+  ]
+}

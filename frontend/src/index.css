@@ -15,6 +15,7 @@
   --color-foreground: #0f172a;
   --color-border: #e2e8f0;
   --color-ring: #e11d48;
+  --chart-surface: #ffffff;
 }
 
 @layer base {
@@ -24,3 +25,64 @@
   h1, h2, h3, h4, h5, h6 { font-family: "Manrope Variable", sans-serif; }
   button, a { -webkit-tap-highlight-color: transparent; }
 }
+
+html.dark {
+  --chart-surface: #111827;
+  color-scheme: dark;
+}
+
+html.dark body,
+html.dark [class~="bg-[#f8f9fb]"] {
+  background-color: #080d18;
+  color: #e5edf8;
+}
+
+html.dark .bg-white,
+html.dark [class~="bg-white/95"] {
+  background-color: #111827;
+}
+
+html.dark .bg-slate-50 { background-color: #172033; }
+html.dark .bg-slate-100 { background-color: #202c40; }
+html.dark .bg-slate-950 { background-color: #030712; }
+html.dark .bg-rose-50,
+html.dark [class*="bg-rose-50/"] { background-color: #321522; }
+html.dark .bg-rose-100 { background-color: #4a1d2c; }
+html.dark .bg-amber-50 { background-color: #342611; }
+html.dark .bg-amber-100 { background-color: #4a3513; }
+html.dark .bg-emerald-50 { background-color: #0d2d27; }
+html.dark .bg-emerald-100 { background-color: #134238; }
+html.dark .bg-blue-50 { background-color: #142743; }
+
+html.dark .border-slate-100,
+html.dark .border-slate-200 { border-color: #29364a; }
+html.dark .border-slate-300 { border-color: #3a4960; }
+html.dark .border-rose-100,
+html.dark .border-rose-200 { border-color: #643045; }
+html.dark .border-amber-200 { border-color: #6a4b1c; }
+html.dark .border-emerald-200 { border-color: #235b4d; }
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #29364a; }
+
+html.dark .text-slate-950,
+html.dark .text-slate-900 { color: #f8fafc; }
+html.dark .text-slate-800,
+html.dark .text-slate-700 { color: #dbe5f3; }
+html.dark .text-slate-600,
+html.dark .text-slate-500 { color: #a9b7ca; }
+html.dark .text-slate-400 { color: #8493a8; }
+html.dark .text-slate-300 { color: #cbd5e1; }
+html.dark .text-rose-700,
+html.dark .text-rose-600 { color: #fb7185; }
+html.dark .text-amber-900,
+html.dark .text-amber-800,
+html.dark .text-amber-700 { color: #fbbf24; }
+html.dark .text-emerald-700,
+html.dark .text-emerald-600 { color: #34d399; }
+html.dark .text-blue-700 { color: #60a5fa; }
+
+html.dark [class*="hover:bg-slate-50"]:hover { background-color: #202c40; }
+html.dark [class*="hover:bg-rose-50"]:hover,
+html.dark [class*="hover:bg-rose-100"]:hover { background-color: #4a1d2c; }
+html.dark input,
+html.dark textarea,
+html.dark select { color-scheme: dark; }

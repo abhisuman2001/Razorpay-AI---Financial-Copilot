@@ -6,6 +6,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Razorpay AI — Financial Copilot for reconciliation, cash-flow forecasting, and explainable CFO insights." />
+    <script>
+      try {
+        if (window.localStorage.getItem("razorpay-ai-theme") === "dark") {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        }
+      } catch (_) {
+        // Storage can be unavailable in privacy-restricted browsers; light mode remains the safe default.
+      }
+    </script>
     <title>Razorpay AI — Financial Copilot</title>
   </head>
   <body>
