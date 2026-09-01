@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Activity, Bot, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, DatabaseZap, LayoutDashboard, ListChecks, LoaderCircle, LogOut, Menu, Moon, Presentation, RefreshCw, Sun } from "lucide-react";
+import { Activity, Bot, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, DatabaseZap, LayoutDashboard, ListChecks, LoaderCircle, LogOut, Menu, Monitor, Moon, Presentation, RefreshCw, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,22 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? "bg-rose-50 text-rose-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
   }`;
 
-type AppTheme = "light" | "dark";
+type ThemePreference = "system" | "light" | "dark";
+type ResolvedTheme = "light" | "dark";
 const THEME_STORAGE_KEY = "razorpay-ai-theme";
+const themeOptions = [
+  { id: "system", label: "System", icon: Monitor },
+  { id: "light", label: "Light", icon: Sun },
+  { id: "dark", label: "Dark", icon: Moon },
+] as const;
 
-function initialTheme(): AppTheme {
+function initialThemePreference(): ThemePreference {
+  if (typeof window === "undefined") return "system";
+  const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+  return saved === "light" || saved === "dark" || saved === "system" ? saved : "system";
+}
+
+function initialResolvedTheme(): ResolvedTheme {
   if (typeof document === "undefined") return "light";
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
@@ -38,15 +50,30 @@ export default function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
-  const [theme, setTheme] = useState<AppTheme>(initialTheme);
+  const [themePreference, setThemePreference] = useState<ThemePreference>(initialThemePreference);
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(initialResolvedTheme);
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const dark = theme === "dark";
-    document.documentElement.classList.toggle("dark", dark);
-    document.documentElement.style.colorScheme = theme;
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
+    const deviceTheme = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      const dark = themePreference === "dark" || (themePreference === "system" && deviceTheme.matches);
+      const nextTheme: ResolvedTheme = dark ? "dark" : "light";
+      document.documentElement.classList.toggle("dark", dark);
+      document.documentElement.style.colorScheme = nextTheme;
+      document.documentElement.dataset.themePreference = themePreference;
+      setResolvedTheme(nextTheme);
+    };
+
+    applyTheme();
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, themePreference);
+    } catch {
+      // The selected theme still works for this session when storage is unavailable.
+    }
+    if (themePreference === "system") deviceTheme.addEventListener("change", applyTheme);
+    return () => deviceTheme.removeEventListener("change", applyTheme);
+  }, [themePreference]);
   const dashboard = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => apiGet<DashboardResponse>("/dashboard"),
@@ -76,7 +103,6 @@ export default function AppShell() {
     await queryClient.invalidateQueries({ queryKey: ["cfo"] });
     await queryClient.invalidateQueries({ queryKey: ["why"] });
   };
-  const toggleTheme = () => setTheme((current) => current === "dark" ? "light" : "dark");
   const logoutDemoSession = () => {
     toast.success("Demo session ended", {
       description: "This prototype has no sign-in yet, so the financial workspace remains accessible.",
@@ -162,11 +188,26 @@ export default function AppShell() {
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={toggleTheme} className="min-h-10 cursor-pointer px-2 py-2" data-testid="header-theme-toggle">
-                  {theme === "dark" ? <Sun className="text-amber-400" /> : <Moon className="text-slate-500" />}
-                  <span className="font-medium" data-testid="header-theme-toggle-label">Dark mode</span>
-                  <span className={`ml-auto rounded-full px-2 py-0.5 text-[9px] font-bold ${theme === "dark" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`} data-testid="header-theme-toggle-state">{theme === "dark" ? "On" : "Off"}</span>
-                </DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="flex items-center justify-between px-2 py-1.5" data-testid="header-theme-menu-label">
+                    <span data-testid="header-theme-menu-title">Appearance</span>
+                    <span className="text-[9px] font-normal text-slate-400" data-testid="header-theme-current-state">
+                      {themePreference === "system" ? `System · ${resolvedTheme === "dark" ? "Dark" : "Light"}` : themePreference === "dark" ? "Dark" : "Light"}
+                    </span>
+                  </DropdownMenuLabel>
+                  {themeOptions.map(({ id, label, icon: Icon }) => (
+                    <DropdownMenuItem
+                      key={id}
+                      onClick={() => setThemePreference(id)}
+                      className="min-h-9 cursor-pointer px-2 py-2"
+                      data-testid={`header-theme-${id}`}
+                    >
+                      <Icon className={id === "light" ? "text-amber-400" : id === "dark" ? "text-slate-500" : "text-rose-500"} />
+                      <span className="font-medium" data-testid={`header-theme-${id}-label`}>{label}</span>
+                      {themePreference === id && <Check className="ml-auto text-emerald-500" data-testid={`header-theme-${id}-selected`} />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logoutDemoSession} className="min-h-10 cursor-pointer px-2 py-2 text-rose-700 focus:bg-rose-50 focus:text-rose-700" data-testid="header-logout-button">
                   <LogOut />

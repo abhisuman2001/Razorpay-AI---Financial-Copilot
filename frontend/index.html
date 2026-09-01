@@ -8,12 +8,18 @@
     <meta name="description" content="Razorpay AI — Financial Copilot for reconciliation, cash-flow forecasting, and explainable CFO insights." />
     <script>
       try {
-        if (window.localStorage.getItem("razorpay-ai-theme") === "dark") {
+        const savedTheme = window.localStorage.getItem("razorpay-ai-theme");
+        const themePreference = savedTheme === "light" || savedTheme === "dark" || savedTheme === "system" ? savedTheme : "system";
+        const useDarkTheme = themePreference === "dark" || (themePreference === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.themePreference = themePreference;
+        if (useDarkTheme) {
           document.documentElement.classList.add("dark");
           document.documentElement.style.colorScheme = "dark";
+        } else {
+          document.documentElement.style.colorScheme = "light";
         }
       } catch (_) {
-        // Storage can be unavailable in privacy-restricted browsers; light mode remains the safe default.
+        // Storage can be unavailable in privacy-restricted browsers; the app remains usable.
       }
     </script>
     <title>Razorpay AI — Financial Copilot</title>
