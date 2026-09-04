@@ -12,8 +12,10 @@ from models.executive import (
     MetricEvidence,
 )
 from models.merchant_tables import Expense, Payment, Settlement
+from services.alerts import detect_alerts
 from services.cashflow import build_cashflow_forecast
 from services.financial_tools import get_revenue
+from services.health_score import calculate_health_score
 from services.reconciliation import calculate_records, default_date_range, summarize_records
 
 
@@ -36,6 +38,8 @@ async def build_executive_dashboard(session: AsyncSession) -> ExecutiveDashboard
     reconciliation_records = await calculate_records(session, start, end)
     reconciliation = summarize_records(reconciliation_records, start, end)
     insights = await daily_insights(session)
+    health_score = await calculate_health_score(session)
+    alerts = await detect_alerts(session)
 
     current_month_start = today.replace(day=1)
     recent_payments = list((await session.scalars(
@@ -148,4 +152,6 @@ async def build_executive_dashboard(session: AsyncSession) -> ExecutiveDashboard
         ),
         insights=insights.insights,
         insight_mode=insights.mode,
+        health_score=health_score,
+        alerts=alerts,
     )

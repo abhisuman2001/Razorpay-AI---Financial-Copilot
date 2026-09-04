@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -52,4 +52,6 @@ class ExecutiveDashboardResponse(BaseModel):
     reconciliation: ExecutiveReconciliation
     insights: list[DailyInsight]
     insight_mode: str
+    health_score: dict[str, Any]  # HealthScore from services.health_score
+    alerts: list[dict[str, Any]]  # List of Alert from services.alerts
     amount_unit: str = "paise"
