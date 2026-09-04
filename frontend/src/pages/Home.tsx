@@ -6,6 +6,8 @@ import { Link } from "react-router-dom";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Banknote, CheckCircle2, CircleAlert, Equal, HelpCircle, ReceiptIndianRupee, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
 
 import WhyMetricSheet from "@/components/WhyMetricSheet";
+import HealthScoreCard from "@/components/HealthScoreCard";
+import AlertsCard from "@/components/AlertsCard";
 import { apiGet } from "@/lib/api";
 import { formatDate, formatPaiseINR } from "@/lib/format";
 import type { DailyInsight, ExecutiveDashboardResponse, ExecutiveMetric } from "@/lib/types";
@@ -49,14 +51,47 @@ export default function Home() {
       </section>
 
       {dashboard.isError ? <DataUnavailable /> : data ? <div className="mt-7 flex flex-col gap-7">
-        <section className="order-2 grid gap-4 sm:grid-cols-2 xl:order-1 xl:grid-cols-4" data-testid="executive-metrics-grid">{data.metrics.map((metric) => <MetricCard key={metric.id} metric={metric} onExplain={() => setSelectedMetric(metric)} />)}</section>
-
-        <section className="order-1 xl:order-3" data-testid="executive-insights-section">
-          <div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-600" data-testid="executive-insights-eyebrow">Needs attention</p><h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-slate-900" data-testid="executive-insights-title">AI CFO insights</h2></div><Link to="/cfo" className="hidden items-center gap-1.5 text-xs font-bold text-rose-700 transition-transform hover:translate-x-0.5 sm:inline-flex" data-testid="executive-insights-view-all">Ask AI CFO <ArrowRight size={13} /></Link></div>
-          <div className="grid gap-4 lg:grid-cols-3" data-testid="executive-insights-grid">{data.insights.slice(0, 3).map((insight) => <ExecutiveInsightCard key={insight.id} insight={insight} />)}</div>
+        {/* Row 1: KPI metrics */}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-testid="executive-metrics-grid">
+          {data.metrics.map((metric) => <MetricCard key={metric.id} metric={metric} onExplain={() => setSelectedMetric(metric)} />)}
         </section>
 
-        <section className="order-3 grid gap-5 xl:order-2 xl:grid-cols-[1.55fr_0.85fr]" data-testid="executive-analytics-grid">
+        {/* Row 2: Health Score + Alerts */}
+        <section data-testid="financial-health-section">
+          <div className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-600" data-testid="health-section-eyebrow">Health & Alerts</p>
+            <h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-slate-900" data-testid="health-section-title">Financial Health Score & Needs Attention</h2>
+          </div>
+          <div className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
+            <HealthScoreCard healthScore={data.health_score} />
+            <div>
+              <div className="mb-3 flex items-end justify-between">
+                <h3 className="text-sm font-bold text-slate-700" data-testid="alerts-section-title">Needs Attention</h3>
+                <p className="text-[10px] text-slate-400" data-testid="alerts-count">
+                  {data.alerts.length} {data.alerts.length === 1 ? "alert" : "alerts"}
+                </p>
+              </div>
+              <AlertsCard alerts={data.alerts} />
+            </div>
+          </div>
+        </section>
+
+        {/* Row 3: AI CFO Insights */}
+        <section data-testid="executive-insights-section">
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-600" data-testid="executive-insights-eyebrow">AI Copilot</p>
+              <h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-slate-900" data-testid="executive-insights-title">AI CFO insights</h2>
+            </div>
+            <Link to="/cfo" className="hidden items-center gap-1.5 text-xs font-bold text-rose-700 transition-transform hover:translate-x-0.5 sm:inline-flex" data-testid="executive-insights-view-all">Ask AI CFO <ArrowRight size={13} /></Link>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3" data-testid="executive-insights-grid">
+            {data.insights.slice(0, 3).map((insight) => <ExecutiveInsightCard key={insight.id} insight={insight} />)}
+          </div>
+        </section>
+
+        {/* Row 4: Cash flow chart + Reconciliation */}
+        <section className="grid gap-5 xl:grid-cols-[1.55fr_0.85fr]" data-testid="executive-analytics-grid">
           <div className="rounded-lg border border-slate-200 bg-white" data-testid="executive-cashflow-card">
             <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:p-6"><div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400" data-testid="cashflow-section-eyebrow">Cash flow</p><h2 className="mt-2 font-heading text-lg font-bold text-slate-900" data-testid="cashflow-section-title">Actual & 30-day outlook</h2></div><div className="flex items-center gap-4 text-[10px] text-slate-500"><Legend color="bg-slate-500" label="60-day actual" testId="executive-legend-actual" /><Legend color="bg-rose-600" label="Forecast" testId="executive-legend-forecast" /><button type="button" onClick={() => setSelectedMetric(data.metrics.find((metric) => metric.id === "cash_forecast") ?? null)} className="inline-flex items-center gap-1 font-bold text-rose-700 transition-colors hover:text-rose-800" data-testid="cashflow-explain-button"><HelpCircle size={12} />Explain</button></div></div>
             <div className="h-[340px] p-3 sm:p-6" data-testid="executive-cashflow-chart"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={chartData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}><defs><linearGradient id="executiveBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fda4af" stopOpacity={0.34} /><stop offset="100%" stopColor="#fda4af" stopOpacity={0.04} /></linearGradient></defs><CartesianGrid stroke="#526072" strokeOpacity={0.24} vertical={false} /><XAxis dataKey="date" tickFormatter={(value: string) => value.slice(5)} minTickGap={28} tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} /><YAxis tickFormatter={(value: number) => formatPaiseINR(value, true)} tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={58} /><Tooltip content={<CashTooltip />} /><Area type="monotone" dataKey="upper" stroke="none" fill="url(#executiveBand)" connectNulls={false} /><Area type="monotone" dataKey="lower" stroke="#fecdd3" fill="var(--chart-surface)" fillOpacity={0.92} connectNulls={false} /><Line type="monotone" dataKey="actual_balance" stroke="#64748b" strokeWidth={2} dot={false} connectNulls={false} /><Line type="monotone" dataKey="forecast_balance" stroke="#e11d48" strokeWidth={2.5} dot={false} connectNulls={false} /></ComposedChart></ResponsiveContainer></div>
@@ -88,7 +123,14 @@ function MetricCard({ metric, onExplain }: { metric: ExecutiveMetric; onExplain:
   return <article className="group rounded-lg border border-slate-200 bg-white p-5 transition-transform hover:-translate-y-0.5 hover:shadow-md" data-testid={`executive-metric-${metric.id}`}><div className="flex items-center justify-between"><p className="text-xs font-medium text-slate-400" data-testid={`executive-metric-${metric.id}-label`}>{metric.label}</p><span className={`flex h-8 w-8 items-center justify-center rounded-md ${visual.color}`}>{visual.icon}</span></div><div className="mt-5 flex items-end justify-between gap-3"><p className="font-mono text-2xl font-medium tracking-tight text-slate-950" data-testid={`executive-metric-${metric.id}-value`}>{value}</p>{metric.change_percent !== null && <span className={`mb-1 inline-flex items-center gap-0.5 text-[10px] font-bold ${metric.trend === "up" ? "text-emerald-600" : "text-rose-600"}`} data-testid={`executive-metric-${metric.id}-change`}>{metric.trend === "up" ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}{Math.abs(metric.change_percent)}%</span>}</div><p className="mt-2 truncate text-[11px] text-slate-500" data-testid={`executive-metric-${metric.id}-detail`}>{metric.detail}</p><button type="button" onClick={onExplain} className="mt-5 inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500 transition-colors hover:text-rose-700" data-testid={`executive-metric-${metric.id}-why-button`}><HelpCircle size={12} />Why this number?</button></article>;
 }
 
-function ExecutiveInsightCard({ insight }: { insight: DailyInsight }) { const styles = { high: "bg-rose-50 text-rose-700", medium: "bg-amber-50 text-amber-700", low: "bg-emerald-50 text-emerald-700" }; const icons: Record<string, ReactNode> = { Reconciliation: <Equal size={17} />, "Cash flow": <TrendingUp size={17} />, Revenue: <ReceiptIndianRupee size={17} /> }; const path = insight.category === "Reconciliation" ? "/reconciliation" : insight.category === "Cash flow" ? "/forecast" : "/cfo"; return <article className="flex flex-col rounded-lg border border-slate-200 bg-white p-5 transition-transform hover:-translate-y-0.5 hover:shadow-md" data-testid={`executive-insight-${insight.id}`}><div className="flex items-center justify-between"><span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide ${styles[insight.severity]}`} data-testid={`executive-insight-${insight.id}-severity`}>{insight.severity}</span><span className="text-rose-600">{icons[insight.category] ?? <Sparkles size={17} />}</span></div><h3 className="mt-4 font-heading text-base font-bold text-slate-900" data-testid={`executive-insight-${insight.id}-title`}>{insight.title}</h3><p className="mt-2 flex-1 text-xs leading-5 text-slate-500" data-testid={`executive-insight-${insight.id}-explanation`}>{insight.summary}</p><div className="mt-5 border-t border-slate-100 pt-4"><p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-slate-400" data-testid={`executive-insight-${insight.id}-metric-label`}>{insight.metric_label}</p><p className="mt-1 font-mono text-lg font-medium text-slate-900" data-testid={`executive-insight-${insight.id}-metric-value`}>{insight.metric_value}</p><Link to={path} className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-700 transition-transform hover:translate-x-0.5" data-testid={`executive-insight-${insight.id}-action`}>{insight.action}<ArrowRight size={12} /></Link></div></article>; }
+function ExecutiveInsightCard({ insight }: { insight: DailyInsight }) {
+  const styles = { high: "bg-rose-50 text-rose-700", medium: "bg-amber-50 text-amber-700", low: "bg-emerald-50 text-emerald-700" };
+  const icons: Record<string, ReactNode> = { Reconciliation: <Equal size={17} />, "Cash flow": <TrendingUp size={17} />, Revenue: <ReceiptIndianRupee size={17} /> };
+  const categoryPaths: Record<string, string> = { Reconciliation: "/reconciliation", "Cash flow": "/forecast", Revenue: "/cfo", "Payment failures": "/cfo", Refunds: "/cfo" };
+  const ctaLabels: Record<string, string> = { Reconciliation: "Review Queue", "Cash flow": "View Forecast", Revenue: "Investigate", "Payment failures": "Review Failures", Refunds: "Analyze Refunds" };
+  const path = categoryPaths[insight.category] ?? "/cfo";
+  return <article className="flex flex-col rounded-lg border border-slate-200 bg-white p-5 transition-transform hover:-translate-y-0.5 hover:shadow-md" data-testid={`executive-insight-${insight.id}`}><div className="flex items-center justify-between"><span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide ${styles[insight.severity]}`} data-testid={`executive-insight-${insight.id}-severity`}>{insight.severity}</span><span className="text-rose-600">{icons[insight.category] ?? <Sparkles size={17} />}</span></div><h3 className="mt-4 font-heading text-base font-bold text-slate-900" data-testid={`executive-insight-${insight.id}-title`}>{insight.title}</h3><p className="mt-2 flex-1 text-xs leading-5 text-slate-500" data-testid={`executive-insight-${insight.id}-explanation`}>{insight.summary}</p><div className="mt-5 border-t border-slate-100 pt-4"><p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-slate-400" data-testid={`executive-insight-${insight.id}-metric-label`}>{insight.metric_label}</p><p className="mt-1 font-mono text-lg font-medium text-slate-900" data-testid={`executive-insight-${insight.id}-metric-value`}>{insight.metric_value}</p><div className="mt-4 flex items-center gap-2"><Link to={path} className="inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-700 transition-transform hover:translate-x-0.5" data-testid={`executive-insight-${insight.id}-action`}>{ctaLabels[insight.category] ?? "View Details"}<ArrowRight size={12} /></Link></div></div></article>;
+}
 
 function ReconStat({ label, value, testId, tone = "slate" }: { label: string; value: string; testId: string; tone?: "slate" | "green" | "red" | "amber" }) { const colors = { slate: "text-slate-900", green: "text-emerald-700", red: "text-rose-700", amber: "text-amber-700" }; return <div className="p-4" data-testid={testId}><p className="text-[9px] uppercase tracking-[0.12em] text-slate-400" data-testid={`${testId}-label`}>{label}</p><p className={`mt-2 font-mono text-lg font-medium ${colors[tone]}`} data-testid={`${testId}-value`}>{value}</p></div>; }
 function Legend({ color, label, testId }: { color: string; label: string; testId: string }) { return <span className="flex items-center gap-1.5" data-testid={testId}><span className={`h-2 w-2 rounded-full ${color}`} />{label}</span>; }

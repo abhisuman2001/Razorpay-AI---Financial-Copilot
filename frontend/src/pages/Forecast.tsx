@@ -5,9 +5,10 @@ import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip,
 import { ArrowDownLeft, ArrowUpRight, Banknote, CircleAlert, HelpCircle, Info, ShieldCheck, TrendingUp } from "lucide-react";
 
 import WhyMetricSheet from "@/components/WhyMetricSheet";
+import ForecastExplanationCard from "@/components/ForecastExplanation";
 import { apiGet } from "@/lib/api";
 import { formatDate, formatPaiseINR } from "@/lib/format";
-import type { CashFlowForecastResponse, ForecastRisk, WhyMetricId } from "@/lib/types";
+import type { CashFlowForecastResponse, ForecastExplanation, ForecastRisk, WhyMetricId } from "@/lib/types";
 
 type Horizon = 7 | 30 | 90;
 
@@ -27,7 +28,15 @@ export default function Forecast() {
     queryFn: () => apiGet<CashFlowForecastResponse>(`/forecast/${horizon}`),
     retry: false,
   });
+  const explanationQuery = useQuery({
+    queryKey: ["forecast-explanation", horizon],
+    queryFn: () => apiGet<ForecastExplanation>(`/forecast/${horizon}/explanation`),
+    retry: false,
+    enabled: query.isSuccess,
+  });
   const data = query.data;
+  const explanation = explanationQuery.data;
+
   const chartData: ChartPoint[] = data ? [
     ...data.historical.map((point) => ({
       date: point.date, actual_balance: point.cumulative_cash_balance,
@@ -60,8 +69,18 @@ export default function Forecast() {
           <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 text-[11px] leading-5 text-slate-500 sm:flex-row sm:items-start sm:justify-between sm:px-6"><span className="flex max-w-3xl items-start gap-2" data-testid="forecast-method-note"><Info size={14} className="mt-0.5 shrink-0 text-slate-400" />{data.methodology}</span><span className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-slate-600" data-testid="forecast-confidence"><ShieldCheck size={14} className="text-emerald-500" />{data.confidence_label}</span></div>
         </section>
 
-        <section data-testid="forecast-risks-section"><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-600" data-testid="forecast-risks-eyebrow">Watchlist</p><h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-slate-900" data-testid="forecast-risks-title">Important forecast risks</h2></div><p className="hidden text-xs text-slate-400 sm:block" data-testid="forecast-risks-source">Deterministic backend rules</p></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-testid="forecast-risks-grid">{data.risks.map((risk) => <RiskCard key={risk.id} risk={risk} />)}</div></section>
+        <section data-testid="forecast-risks-section">
+          <div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-600" data-testid="forecast-risks-eyebrow">Watchlist</p><h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-slate-900" data-testid="forecast-risks-title">Important forecast risks</h2></div><p className="hidden text-xs text-slate-400 sm:block" data-testid="forecast-risks-source">Deterministic backend rules</p></div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-testid="forecast-risks-grid">{data.risks.map((risk) => <RiskCard key={risk.id} risk={risk} />)}</div>
+        </section>
+
+        {explanation && (
+          <section data-testid="forecast-explanation-section">
+            <ForecastExplanationCard explanation={explanation} />
+          </section>
+        )}
       </> : <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm text-slate-500" data-testid="forecast-loading">Fitting daily income and expense models…</div>}
+
       <WhyMetricSheet metricId={whyMetric} open={Boolean(whyMetric)} onOpenChange={(open) => { if (!open) setWhyMetric(null); }} />
     </div>
   );

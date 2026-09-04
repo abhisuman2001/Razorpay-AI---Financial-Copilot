@@ -10,10 +10,10 @@ class FinancialTransaction(Base):
     __tablename__ = "financial_transactions"
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
-    transaction_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
-    reference: Mapped[str] = mapped_column(String(80), nullable=False)
-    category: Mapped[str] = mapped_column(String(40), nullable=False)
-    direction: Mapped[str] = mapped_column(String(10), nullable=False)
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
-    expected_amount: Mapped[float] = mapped_column(Float, nullable=False)
-    status: Mapped[str] = mapped_column(String(15), nullable=False)
+    transaction_date: Mapped[date] = mapped_column(Date, index=True)
+    reference: Mapped[str] = mapped_column(String(80))
+    category: Mapped[str] = mapped_column(String(40))
+    direction: Mapped[str] = mapped_column(String(10))
+    amount: Mapped[float] = mapped_column(Float)
+    expected_amount: Mapped[float] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(15))

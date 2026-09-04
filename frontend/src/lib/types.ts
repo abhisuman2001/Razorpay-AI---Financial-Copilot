@@ -437,7 +437,56 @@ export interface ExecutiveDashboardResponse {
   reconciliation: ExecutiveReconciliation;
   insights: DailyInsight[];
   insight_mode: string;
+  health_score: HealthScore;
+  alerts: Alert[];
   amount_unit: string;
+}
+
+export interface ComponentScore {
+  name: string;
+  score: number;
+  weight: number;
+  explanation: string;
+  status: "excellent" | "good" | "fair" | "poor";
+}
+
+export interface HealthScore {
+  overall_score: number;
+  overall_explanation: string;
+  overall_status: "excellent" | "good" | "fair" | "poor";
+  components: ComponentScore[];
+  as_of_date: string;
+  calculation_method: string;
+}
+
+export type AlertSeverity = "critical" | "high" | "medium" | "low";
+
+export interface Alert {
+  id: string;
+  severity: AlertSeverity;
+  category: string;
+  title: string;
+  metric_label: string;
+  metric_value: string;
+  explanation: string;
+  recommended_action: string;
+  detected_at: string;
+  source: string;
+}
+
+export interface ForecastDriver {
+  category: string;
+  label: string;
+  value: string;
+  explanation: string;
+  impact: "positive" | "negative" | "neutral";
+}
+
+export interface ForecastExplanation {
+  drivers: ForecastDriver[];
+  confidence_explanation: string;
+  confidence_factors: string[];
+  uncertainty_range_explanation: string;
 }
 
 export interface DemoScenario {
