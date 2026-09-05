@@ -379,3 +379,200 @@ WHY_REGISTRY: dict[str, WhyFunction] = {
     "forecasted_balance": why_forecast,
     "reconciliation_exceptions": why_reconciliation,
 }
+
+
+# ── Cash Balance Analysis ─────────────────────────────────────────────────────
+
+async def cash_balance_analysis(session: AsyncSession) -> "CashBalanceAnalysis":
+    """
+    Build a fully auditable breakdown of how the current cash balance was calculated.
+
+    Formula (deterministic, no LLM):
+        current_balance = opening_balance
+                        + SUM(settlements.net_settlement  WHERE status='settled')
+                        - SUM(expenses.amount)
+
+    All amounts are in paise.
+    """
+    from models.why import (
+        CashBalanceAnalysis,
+        CashBalanceDailyRow,
+        CashBalanceWaterfallRow,
+    )
+    from services.cashflow import OPENING_BALANCE, load_daily_cashflow
+
+    history, _, _, as_of = await load_daily_cashflow(session)
+
+    period_start = history[0].date
+    period_end = history[-1].date
+    current_balance = history[-1].cumulative_cash_balance
+
+    # ── Opening balance ───────────────────────────────────────────────────────
+    opening_balance = OPENING_BALANCE
+    opening_balance_date = period_start
+
+    # ── Aggregate settled income ──────────────────────────────────────────────
+    from models.merchant_tables import Expense, Settlement
+
+    settlement_rows = (await session.execute(
+        select(
+            func.coalesce(func.sum(Settlement.net_settlement), 0),
+            func.coalesce(func.sum(Settlement.fees), 0),
+            func.coalesce(func.sum(Settlement.refund_amount), 0),
+            func.count(Settlement.settlement_id),
+        ).where(
+            Settlement.status == "settled",
+            Settlement.settlement_date >= period_start,
+            Settlement.settlement_date <= period_end,
+        )
+    )).one()
+    total_settled_cash = int(settlement_rows[0])
+    settlement_fees_total = int(settlement_rows[1])
+    settlement_refunds_total = int(settlement_rows[2])
+    settlement_record_count = int(settlement_rows[3])
+
+    # ── Aggregate booked expenses ─────────────────────────────────────────────
+    expense_rows = (await session.execute(
+        select(
+            func.coalesce(func.sum(Expense.amount), 0),
+            func.count(Expense.expense_id),
+        ).where(
+            Expense.date >= period_start,
+            Expense.date <= period_end,
+        )
+    )).one()
+    total_expenses = int(expense_rows[0])
+    expense_record_count = int(expense_rows[1])
+
+    total_other_income = 0  # reserved; no other income type exists yet
+
+    # ── Calculated balance (must equal current_balance) ───────────────────────
+    calculated_balance = opening_balance + total_settled_cash + total_other_income - total_expenses
+    rounding_difference = current_balance - calculated_balance
+
+    # ── Waterfall rows ────────────────────────────────────────────────────────
+    waterfall: list[CashBalanceWaterfallRow] = [
+        CashBalanceWaterfallRow(
+            id="opening",
+            label="Opening cash balance",
+            amount=opening_balance,
+            is_subtotal=False,
+            source_table="OPENING_CASH_BALANCE_PAISE",
+            record_count=0,
+            description=(
+                "Configured starting cash balance for the business. "
+                "Set via the OPENING_CASH_BALANCE_PAISE environment variable."
+            ),
+        ),
+        CashBalanceWaterfallRow(
+            id="settled_cash",
+            label="+ Settled cash received",
+            amount=total_settled_cash,
+            is_subtotal=False,
+            source_table="settlements.net_settlement",
+            record_count=settlement_record_count,
+            description=(
+                f"Net settled cash from {settlement_record_count:,} settlement records "
+                f"(gross payment minus refunds, fees, and taxes already deducted by the gateway)."
+            ),
+        ),
+        CashBalanceWaterfallRow(
+            id="other_income",
+            label="+ Other recognized income",
+            amount=total_other_income,
+            is_subtotal=False,
+            source_table="—",
+            record_count=0,
+            description="No additional income types are recognized in the current dataset.",
+        ),
+        CashBalanceWaterfallRow(
+            id="expenses",
+            label="− Booked expenses",
+            amount=-total_expenses,
+            is_subtotal=False,
+            source_table="expenses.amount",
+            record_count=expense_record_count,
+            description=(
+                f"Operating expenses booked across {expense_record_count:,} expense records "
+                f"(payroll, software, marketing, logistics, etc.)."
+            ),
+        ),
+        CashBalanceWaterfallRow(
+            id="current_balance",
+            label="= Current cash balance",
+            amount=current_balance,
+            is_subtotal=True,
+            source_table="computed",
+            record_count=0,
+            description=(
+                "Opening balance + settled cash + other income − expenses. "
+                "This value matches the Current Cash Balance shown on the Cash Flow page."
+            ),
+        ),
+    ]
+
+    # ── Daily breakdown ───────────────────────────────────────────────────────
+    daily_breakdown: list[CashBalanceDailyRow] = [
+        CashBalanceDailyRow(
+            date=point.date,
+            inflows=point.daily_income,
+            outflows=point.daily_expenses,
+            net_movement=point.daily_net_cashflow,
+            ending_balance=point.cumulative_cash_balance,
+        )
+        for point in history
+    ]
+
+    # ── Why this matters (deterministic narrative) ────────────────────────────
+    primary_driver = "settled cash receipts" if total_settled_cash > total_expenses else "booked expenses"
+    if total_settled_cash > 0 and total_expenses > 0:
+        inflow_pct = round((total_settled_cash / (opening_balance + total_settled_cash)) * 100, 1)
+        expense_drag = round((total_expenses / (opening_balance + total_settled_cash)) * 100, 1) if (opening_balance + total_settled_cash) else 0
+        why = (
+            f"The current cash balance of ₹{current_balance / 100:,.0f} is primarily driven by "
+            f"the opening balance of ₹{opening_balance / 100:,.0f} and "
+            f"₹{total_settled_cash / 100:,.0f} in cumulative settled cash receipts "
+            f"({inflow_pct:.1f}% of the balance built from inflows). "
+            f"Booked expenses of ₹{total_expenses / 100:,.0f} have reduced available cash "
+            f"by {expense_drag:.1f}% of total inflows. "
+            f"Settlement fees (₹{settlement_fees_total / 100:,.0f}) and refunds "
+            f"(₹{settlement_refunds_total / 100:,.0f}) are already deducted within "
+            f"the settled cash figure."
+        )
+    else:
+        why = (
+            f"The current cash balance is ₹{current_balance / 100:,.0f}. "
+            "Insufficient transaction history to provide a full driver breakdown."
+        )
+
+    return CashBalanceAnalysis(
+        as_of_date=as_of,
+        period_start=period_start,
+        period_end=period_end,
+        opening_balance=opening_balance,
+        opening_balance_date=opening_balance_date,
+        opening_balance_source="OPENING_CASH_BALANCE_PAISE environment variable",
+        opening_balance_configurable=True,
+        total_settled_cash=total_settled_cash,
+        total_other_income=total_other_income,
+        settlement_record_count=settlement_record_count,
+        settlement_fees_total=settlement_fees_total,
+        settlement_refunds_total=settlement_refunds_total,
+        total_expenses=total_expenses,
+        expense_record_count=expense_record_count,
+        waterfall=waterfall,
+        daily_breakdown=daily_breakdown,
+        calculated_balance=calculated_balance,
+        current_balance=current_balance,
+        rounding_difference=rounding_difference,
+        why_this_matters=why,
+        calculation_method=(
+            "Deterministic: current_balance = opening_balance "
+            "+ SUM(settlements.net_settlement WHERE status='settled') "
+            "− SUM(expenses.amount). No LLM involvement."
+        ),
+        validation_status=(
+            "✓ Balance reconciles exactly" if rounding_difference == 0
+            else f"⚠ Rounding difference: {rounding_difference} paise"
+        ),
+    )

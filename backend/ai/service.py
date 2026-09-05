@@ -14,6 +14,7 @@ from models.cfo import (
     DailyInsightsResponse,
     FinancialToolResult,
 )
+from services.alerts import detect_alerts
 from services.financial_tools import TOOL_REGISTRY
 
 
@@ -40,6 +41,14 @@ def choose_tools(question: str) -> list[str]:
     if any(word in text for word in ["risk", "concern", "today", "worry", "problem"]):
         return ["get_cashflow_forecast", "get_reconciliation_exceptions", "get_failed_payments", "get_revenue"]
     return ["get_revenue", "get_expenses", "get_cash_balance", "get_reconciliation_exceptions", "get_cashflow_forecast"]
+
+
+def _is_worry_question(question: str) -> bool:
+    """Return True for 'what should I worry about today?' and similar phrasings."""
+    text = question.lower()
+    return any(word in text for word in ["worry", "concern", "risk today", "today", "problem today", "should i"]) and any(
+        word in text for word in ["today", "worry", "concern", "problem", "risk"]
+    )
 
 
 async def collect_context(
@@ -171,7 +180,83 @@ def deterministic_explanation(
     return answer, facts, predictions, reasoning, recommendations, insufficient
 
 
+async def _answer_worry_question(session: AsyncSession, question: str) -> CfoChatResponse:
+    """
+    Answer 'What should I worry about today?' using the same deterministic alert
+    engine that drives the Needs Attention panel.  This guarantees that the AI CFO
+    and the Overview dashboard show consistent priorities and numbers.
+    """
+    alerts = await detect_alerts(session)
+
+    # Take the top-priority alerts (up to 3)
+    top_alerts = alerts[:3]
+
+    facts: list[str] = []
+    recommendations: list[str] = []
+    for alert in top_alerts:
+        facts.append(
+            f"[{alert['severity'].upper()}] {alert['title']}: "
+            f"{alert['what_happened']} "
+            f"Financial impact: {alert['financial_impact']}."
+        )
+        recommendations.append(f"{alert['recommended_action']} → {alert['cta_label']}")
+
+    if not top_alerts:
+        answer = (
+            "No active alerts detected today. "
+            "All key financial indicators are within normal operating ranges."
+        )
+        facts = ["No critical or high-severity alerts are active."]
+        recommendations = ["Continue monitoring daily via the Overview dashboard."]
+    else:
+        severity_labels = [a["severity"] for a in top_alerts]
+        titles = "; ".join(a["title"] for a in top_alerts)
+        answer = (
+            f"There are {len(alerts)} active alerts today. "
+            f"The top priority issues are: {titles}. "
+            "Facts: " + " ".join(facts) +
+            " Recommendations: " + " ".join(recommendations)
+        )
+
+    return CfoChatResponse(
+        id=f"msg_{uuid4().hex[:12]}",
+        question=question,
+        answer=answer,
+        mode="deterministic",
+        facts=facts,
+        predictions=[],
+        reasoning=[
+            "Priorities are derived from the same deterministic alert engine that powers "
+            "the Needs Attention panel on the Overview page.",
+            "Alerts are sorted by severity (critical → low) then by business-impact category.",
+            "No LLM calculates or modifies any financial value.",
+        ],
+        recommendations=recommendations,
+        sources=[
+            CfoSource(
+                id=f"alert:{a['id']}",
+                tool_name=a["source"],
+                label=a["title"],
+                classification="fact",
+                period=a["detected_at"],
+            )
+            for a in top_alerts
+        ],
+        tools_used=list({a["source"] for a in alerts}),
+        insufficient_data=False,
+        provider_message=(
+            "Answered by the deterministic alert engine. "
+            "These are the same issues shown in the Needs Attention panel."
+        ),
+    )
+
+
 async def answer_question(session: AsyncSession, question: str) -> CfoChatResponse:
+    # For "worry about today" style questions, derive the answer directly from
+    # the same alerts that power the Needs Attention panel so the numbers match.
+    if _is_worry_question(question):
+        return await _answer_worry_question(session, question)
+
     tool_names = choose_tools(question)
     context = await collect_context(session, tool_names)
     fallback, facts, predictions, reasoning, recommendations, insufficient = deterministic_explanation(question, context)

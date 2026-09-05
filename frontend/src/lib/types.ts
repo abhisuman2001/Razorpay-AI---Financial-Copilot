@@ -446,6 +446,7 @@ export interface ComponentScore {
   name: string;
   score: number;
   weight: number;
+  contribution: number;
   explanation: string;
   status: "excellent" | "good" | "fair" | "poor";
 }
@@ -455,8 +456,11 @@ export interface HealthScore {
   overall_explanation: string;
   overall_status: "excellent" | "good" | "fair" | "poor";
   components: ComponentScore[];
+  strongest_positive: string;
+  strongest_negative: string;
   as_of_date: string;
   calculation_method: string;
+  how_calculated: string;
 }
 
 export type AlertSeverity = "critical" | "high" | "medium" | "low";
@@ -470,6 +474,11 @@ export interface Alert {
   metric_value: string;
   explanation: string;
   recommended_action: string;
+  what_happened: string;
+  why_it_matters: string;
+  financial_impact: string;
+  cta_label: string;
+  cta_path: string;
   detected_at: string;
   source: string;
 }
@@ -680,4 +689,62 @@ export interface WhyMetricResponse {
   source_refs: string[];
   drilldown_path: string;
   insufficient_data: boolean;
+}
+
+// ── Cash Balance Analysis ─────────────────────────────────────────────────────
+
+export interface CashBalanceWaterfallRow {
+  id: string;
+  label: string;
+  /** Amount in paise. Positive = inflow, negative = outflow. */
+  amount: number;
+  is_subtotal: boolean;
+  source_table: string;
+  record_count: number;
+  description: string;
+}
+
+export interface CashBalanceDailyRow {
+  date: string;
+  inflows: number;
+  outflows: number;
+  net_movement: number;
+  ending_balance: number;
+}
+
+export interface CashBalanceAnalysis {
+  as_of_date: string;
+  period_start: string;
+  period_end: string;
+
+  // Opening balance
+  opening_balance: number;
+  opening_balance_date: string;
+  opening_balance_source: string;
+  opening_balance_configurable: boolean;
+
+  // Inflows
+  total_settled_cash: number;
+  total_other_income: number;
+  settlement_record_count: number;
+  settlement_fees_total: number;
+  settlement_refunds_total: number;
+
+  // Outflows
+  total_expenses: number;
+  expense_record_count: number;
+
+  // Waterfall + daily
+  waterfall: CashBalanceWaterfallRow[];
+  daily_breakdown: CashBalanceDailyRow[];
+
+  // Validation
+  calculated_balance: number;
+  current_balance: number;
+  rounding_difference: number;
+
+  // Narrative
+  why_this_matters: string;
+  calculation_method: string;
+  validation_status: string;
 }

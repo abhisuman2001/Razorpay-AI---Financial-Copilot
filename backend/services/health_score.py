@@ -5,7 +5,7 @@ The score is calculated ENTIRELY in the backend using existing financial data.
 The LLM never calculates or modifies this score.
 """
 
-from datetime import date, timedelta
+from datetime import date
 from typing import TypedDict
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +27,7 @@ class ComponentScore(TypedDict):
     name: str
     score: float
     weight: float
+    contribution: float  # score * weight, the actual points added to overall score
     explanation: str
     status: str  # "excellent", "good", "fair", "poor"
 
@@ -38,8 +39,11 @@ class HealthScore(TypedDict):
     overall_explanation: str
     overall_status: str
     components: list[ComponentScore]
+    strongest_positive: str  # name of the component contributing the most positively
+    strongest_negative: str  # name of the component with the lowest score (dragging score down)
     as_of_date: str
     calculation_method: str
+    how_calculated: str  # detailed deterministic explanation of the formula used
 
 
 def _status(score: float) -> str:
@@ -64,6 +68,9 @@ async def calculate_health_score(session: AsyncSession) -> HealthScore:
     4. Reconciliation health (20%)
     5. Refund risk (10%)
     6. Forecast risk (5%)
+
+    Overall score = sum(component_score * weight) for each component.
+    No LLM is used. Every number comes directly from the financial database.
     """
     today = date.fromisoformat(today_iso())
 
@@ -93,13 +100,17 @@ async def calculate_health_score(session: AsyncSession) -> HealthScore:
             "name": "Cash Flow Stability",
             "score": round(cashflow_score, 1),
             "weight": 0.25,
+            "contribution": round(cashflow_score * 0.25, 2),
             "explanation": (
-                f"Net cash flow over 30 days is ₹{net_cashflow / 100:,.0f}. "
+                f"30-day net cash flow is ₹{net_cashflow / 100:,.0f} "
+                f"(ratio to balance: {cashflow_ratio:.3f}). "
                 + (
-                    "Positive and healthy."
+                    "Positive inflows indicate stable operations."
                     if net_cashflow > 0
-                    else "Negative, monitor burn rate carefully."
+                    else "Negative net flow — monitor burn rate carefully."
                 )
+                + f" Score formula: ratio > 0 → min(100, 75 + ratio×100); "
+                f"ratio > -0.1 → 60; else → max(20, 60 + ratio×200)."
             ),
             "status": _status(cashflow_score),
         }
@@ -109,22 +120,35 @@ async def calculate_health_score(session: AsyncSession) -> HealthScore:
     revenue_change_percent = revenue_data.data.get("change_percent")
     if revenue_change_percent is None:
         revenue_score = 50.0
-        revenue_explanation = "Insufficient historical data to assess revenue stability."
+        revenue_explanation = (
+            "Insufficient historical data to assess revenue stability. "
+            "Score defaults to 50 when no prior-month revenue exists."
+        )
     elif revenue_change_percent >= 0:
         revenue_score = min(100, 75 + revenue_change_percent)
-        revenue_explanation = f"Revenue grew {revenue_change_percent}% vs previous month. Strong performance."
+        revenue_explanation = (
+            f"Revenue grew {revenue_change_percent:.2f}% vs previous month. "
+            f"Score formula: min(100, 75 + change%) = {revenue_score:.1f}."
+        )
     elif revenue_change_percent >= -10:
         revenue_score = 65 + revenue_change_percent
-        revenue_explanation = f"Revenue declined {abs(revenue_change_percent)}% vs previous month. Monitor closely."
+        revenue_explanation = (
+            f"Revenue declined {abs(revenue_change_percent):.2f}% vs previous month. "
+            f"Score formula: 65 + change% = {revenue_score:.1f}. Monitor closely."
+        )
     else:
         revenue_score = max(20, 65 + revenue_change_percent)
-        revenue_explanation = f"Revenue declined {abs(revenue_change_percent)}% vs previous month. Urgent attention needed."
+        revenue_explanation = (
+            f"Revenue declined {abs(revenue_change_percent):.2f}% vs previous month. "
+            f"Score formula: max(20, 65 + change%) = {revenue_score:.1f}. Urgent attention needed."
+        )
 
     components.append(
         {
             "name": "Revenue Stability",
             "score": round(revenue_score, 1),
             "weight": 0.20,
+            "contribution": round(revenue_score * 0.20, 2),
             "explanation": revenue_explanation,
             "status": _status(revenue_score),
         }
@@ -142,7 +166,13 @@ async def calculate_health_score(session: AsyncSession) -> HealthScore:
             "name": "Payment Success Rate",
             "score": round(payment_score, 1),
             "weight": 0.20,
-            "explanation": f"Success rate is {success_rate:.1f}% with {failed_count:,} failures this month.",
+            "contribution": round(payment_score * 0.20, 2),
+            "explanation": (
+                f"Success rate = captured / (captured + failed) × 100 = "
+                f"{captured_count:,} / {total_attempts:,} × 100 = {success_rate:.1f}%. "
+                f"There are {failed_count:,} failures this month. "
+                "Score equals the success rate percentage directly."
+            ),
             "status": _status(payment_score),
         }
     )
@@ -150,51 +180,73 @@ async def calculate_health_score(session: AsyncSession) -> HealthScore:
     # 4. Reconciliation health (20%)
     recon_rate = reconciliation_data.data["reconciliation_rate"]
     recon_score = recon_rate
+    total_discrepancy = reconciliation_data.data["total_discrepancy"]
 
     components.append(
         {
             "name": "Reconciliation Health",
             "score": round(recon_score, 1),
             "weight": 0.20,
-            "explanation": f"Reconciliation rate is {recon_rate:.1f}% with ₹{reconciliation_data.data['total_discrepancy'] / 100:,.0f} in discrepancies.",
+            "contribution": round(recon_score * 0.20, 2),
+            "explanation": (
+                f"Reconciliation rate = (MATCHED + PARTIALLY_MATCHED) / total × 100 = {recon_rate:.1f}%. "
+                f"Total discrepancy is ₹{total_discrepancy / 100:,.0f}. "
+                "Score equals the reconciliation rate percentage directly."
+            ),
             "status": _status(recon_score),
         }
     )
 
     # 5. Refund risk (10%)
     refund_rate = refunds_data.data.get("refund_rate_percent") or 0
-    refund_score = max(0, 100 - (refund_rate * 5))  # 20% refund = 0 score
+    refund_score = max(0, 100 - (refund_rate * 5))  # 20% refund rate → 0 score
 
     components.append(
         {
             "name": "Refund Risk",
             "score": round(refund_score, 1),
             "weight": 0.10,
-            "explanation": f"Refund rate is {refund_rate:.2f}% of captured revenue. {'Healthy level.' if refund_rate < 5 else 'High, investigate reasons.'}",
+            "contribution": round(refund_score * 0.10, 2),
+            "explanation": (
+                f"Refund rate is {refund_rate:.2f}% of captured revenue. "
+                f"Score formula: max(0, 100 − refund_rate × 5) = {refund_score:.1f}. "
+                f"{'Healthy level (< 5%).' if refund_rate < 5 else 'High rate — investigate refund reasons.'}"
+            ),
             "status": _status(refund_score),
         }
     )
 
     # 6. Forecast risk (5%)
     forecast_balance = forecast.forecasted_balance
-    forecast_score = 100 if forecast_balance > current_balance * 0.8 else 50
-
+    forecast_score_base = 100 if forecast_balance > current_balance * 0.8 else 50
     high_severity_risks = sum(1 for risk in forecast.risks if risk.severity == "high")
-    forecast_score -= high_severity_risks * 15
-    forecast_score = max(0, forecast_score)
+    forecast_score = max(0, forecast_score_base - high_severity_risks * 15)
 
     components.append(
         {
             "name": "Forecast Risk",
             "score": round(forecast_score, 1),
             "weight": 0.05,
-            "explanation": f"30-day forecast shows {len(forecast.risks)} risks, {high_severity_risks} high-severity.",
+            "contribution": round(forecast_score * 0.05, 2),
+            "explanation": (
+                f"30-day forecast balance is ₹{forecast_balance / 100:,.0f} "
+                f"({'≥' if forecast_balance > current_balance * 0.8 else '<'} 80% of current balance). "
+                f"Base score: {forecast_score_base}. "
+                f"{high_severity_risks} high-severity forecast risk(s) × 15 deducted. "
+                f"Score formula: max(0, base − high_risks × 15) = {forecast_score:.0f}."
+            ),
             "status": _status(forecast_score),
         }
     )
 
     # Calculate overall weighted score
     overall_score = sum(comp["score"] * comp["weight"] for comp in components)
+
+    # Identify strongest positive and negative contributors
+    # Strongest positive = highest contribution (score * weight)
+    strongest_positive_comp = max(components, key=lambda c: c["contribution"])
+    # Strongest negative = lowest score (most dragging on the overall)
+    strongest_negative_comp = min(components, key=lambda c: c["score"])
 
     # Generate overall explanation
     weak_areas = [comp for comp in components if comp["score"] < 60]
@@ -206,11 +258,30 @@ async def calculate_health_score(session: AsyncSession) -> HealthScore:
         names = ", ".join(comp["name"] for comp in weak_areas[:-1])
         overall_explanation = f"{names}, and {weak_areas[-1]['name']} need attention."
 
+    # Build human-readable how_calculated explanation
+    component_lines = "\n".join(
+        f"  • {c['name']}: score {c['score']} × weight {int(c['weight'] * 100)}% = {c['contribution']} pts"
+        for c in components
+    )
+    how_calculated = (
+        f"Overall score is a deterministic weighted sum of {len(components)} components:\n"
+        f"{component_lines}\n"
+        f"Total = {round(overall_score, 1)} / 100.\n"
+        f"Strongest positive contributor: {strongest_positive_comp['name']} "
+        f"(adds {strongest_positive_comp['contribution']} pts).\n"
+        f"Strongest negative contributor: {strongest_negative_comp['name']} "
+        f"(score {strongest_negative_comp['score']} / 100, status: {strongest_negative_comp['status']}).\n"
+        f"No LLM is involved. All values come directly from the financial database."
+    )
+
     return {
         "overall_score": round(overall_score, 1),
         "overall_explanation": overall_explanation,
         "overall_status": _status(overall_score),
         "components": components,
+        "strongest_positive": strongest_positive_comp["name"],
+        "strongest_negative": strongest_negative_comp["name"],
         "as_of_date": today.isoformat(),
         "calculation_method": "Deterministic weighted scoring · No LLM calculations",
+        "how_calculated": how_calculated,
     }
