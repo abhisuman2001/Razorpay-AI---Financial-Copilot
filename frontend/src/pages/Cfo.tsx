@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRight, Bot, CheckCircle2, CircleAlert, Clock3, Database, Eraser, HelpCircle, RotateCcw, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -28,6 +28,7 @@ export default function Cfo() {
   const [question, setQuestion] = useState("");
   const [conversation, setConversation] = useState<ConversationItem[]>([]);
   const [whyMetric, setWhyMetric] = useState<WhyMetricId | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const insightsQuery = useQuery({
     queryKey: ["cfo", "daily-insights"],
     queryFn: () => apiGet<DailyInsightsResponse>("/cfo/insights"),
@@ -53,6 +54,11 @@ export default function Cfo() {
   const submit = (event: FormEvent) => { event.preventDefault(); ask(question); };
   const insights = insightsQuery.data;
 
+  // Auto-scroll to the latest message whenever conversation updates
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [conversation]);
+
   return (
     <div className="space-y-7" data-testid="cfo-page">
       <section className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
@@ -67,23 +73,27 @@ export default function Cfo() {
         {insightsQuery.isError ? <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800" data-testid="cfo-insights-error">Daily insights are unavailable. The chat workspace remains visible.</div> : insights ? <><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5" data-testid="cfo-insights-grid">{insights.insights.map((insight) => <InsightCard key={insight.id} insight={insight} onAsk={() => ask(questionForInsight(insight))} />)}</div><p className="mt-3 text-[10px] leading-5 text-slate-400" data-testid="cfo-insights-disclaimer">{insights.disclaimer}</p></> : <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500" data-testid="cfo-insights-loading">Running read-only financial tools…</div>}
       </section>
 
-      <section className="grid min-h-[620px] overflow-hidden rounded-lg border border-slate-200 bg-white xl:grid-cols-[310px_1fr]" data-testid="cfo-chat-workspace">
-        <aside className="border-b border-slate-200 bg-slate-50 p-5 xl:border-b-0 xl:border-r" data-testid="cfo-chat-sidebar">
+      <section className="grid h-[calc(100vh-22rem)] min-h-[520px] max-h-[780px] overflow-hidden rounded-lg border border-slate-200 bg-white xl:grid-cols-[310px_1fr]" data-testid="cfo-chat-workspace">
+        <aside className="border-b border-slate-200 bg-slate-50 p-5 xl:border-b-0 xl:border-r xl:overflow-y-auto" data-testid="cfo-chat-sidebar">
           <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-md bg-rose-600 text-white"><Bot size={18} /></div><div><p className="font-heading text-sm font-bold text-slate-900" data-testid="cfo-chat-sidebar-title">Financial copilot</p><p className="text-[10px] text-slate-400" data-testid="cfo-chat-sidebar-mode">Read-only · grounded answers</p></div></div>
           <div className="mt-7"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400" data-testid="cfo-suggested-questions-label">Suggested questions</p><div className="mt-3 space-y-2" data-testid="cfo-suggested-questions">{prompts.map((prompt, index) => <button key={prompt} type="button" onClick={() => ask(prompt)} disabled={chat.isPending} className="group flex w-full items-start justify-between gap-2 rounded-md border border-slate-200 bg-white p-3 text-left text-xs leading-5 text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-700 disabled:opacity-50" data-testid={`cfo-suggested-question-${index + 1}`}><span>{prompt}</span><ArrowRight size={13} className="mt-1 shrink-0 transition-transform group-hover:translate-x-0.5" /></button>)}</div></div>
           <div className="mt-7 rounded-md border border-slate-200 bg-white p-4" data-testid="cfo-safety-card"><div className="flex items-center gap-2 text-xs font-bold text-slate-700" data-testid="cfo-safety-title"><ShieldCheck size={14} className="text-emerald-500" />Safe by design</div><ul className="mt-3 space-y-2 text-[10px] leading-4 text-slate-500" data-testid="cfo-safety-list"><li>No write access to records</li><li>No LLM financial calculations</li><li>Predictions labeled separately</li><li>Sources included with answers</li></ul></div>
         </aside>
 
-        <div className="flex min-h-[620px] flex-col" data-testid="cfo-chat-panel">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6"><div><p className="font-heading text-sm font-bold text-slate-900" data-testid="cfo-chat-title">Ask your financial data</p><p className="mt-0.5 text-[10px] text-slate-400" data-testid="cfo-chat-subtitle">Session-only conversation · not stored</p></div>{conversation.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => setConversation([])} data-testid="cfo-clear-chat-button"><Eraser size={14} />Clear</Button>}</div>
+        <div className="flex h-full flex-col overflow-hidden" data-testid="cfo-chat-panel">
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6"><div><p className="font-heading text-sm font-bold text-slate-900" data-testid="cfo-chat-title">Ask your financial data</p><p className="mt-0.5 text-[10px] text-slate-400" data-testid="cfo-chat-subtitle">Session-only conversation · not stored</p></div>{conversation.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => setConversation([])} data-testid="cfo-clear-chat-button"><Eraser size={14} />Clear</Button>}</div>
 
+          {/* Scrollable messages area — grows to fill available height */}
           <div className="flex-1 space-y-6 overflow-y-auto p-5 sm:p-6" data-testid="cfo-chat-messages">
             {conversation.length === 0 && <div className="mx-auto flex max-w-lg flex-col items-center py-16 text-center" data-testid="cfo-chat-empty-state"><div className="flex h-12 w-12 items-center justify-center rounded-lg bg-rose-50 text-rose-600"><Sparkles size={22} /></div><h3 className="mt-5 font-heading text-lg font-bold text-slate-900" data-testid="cfo-chat-empty-title">Start with a financial question</h3><p className="mt-2 text-sm leading-6 text-slate-500" data-testid="cfo-chat-empty-copy">I will select relevant read-only tools, separate facts from forecasts, and show every source used.</p></div>}
             {conversation.map((item) => <Conversation key={item.id} item={item} />)}
             {chat.isError && <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" data-testid="cfo-chat-error">The financial tools could not answer this question. No records were changed.</div>}
+            {/* Scroll anchor */}
+            <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={submit} className="border-t border-slate-100 bg-white p-4 sm:p-5" data-testid="cfo-chat-form"><div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm focus-within:border-rose-300 focus-within:ring-2 focus-within:ring-rose-50"><Textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about revenue, settlements, cash, risks, customers…" maxLength={600} rows={2} className="min-h-16 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0" data-testid="cfo-chat-input" /><div className="flex items-center justify-between gap-3 px-2 pb-1"><p className="text-[10px] text-slate-400" data-testid="cfo-chat-input-note">Financial context is selected on the server</p><Button type="submit" disabled={question.trim().length < 3 || chat.isPending} className="bg-rose-600 text-white hover:bg-rose-700" data-testid="cfo-chat-submit-button">{chat.isPending ? "Analyzing…" : "Ask CFO"}<Send size={14} /></Button></div></div></form>
+          {/* Input bar — always pinned at the bottom */}
+          <form onSubmit={submit} className="shrink-0 border-t border-slate-100 bg-white p-4 sm:p-5" data-testid="cfo-chat-form"><div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm focus-within:border-rose-300 focus-within:ring-2 focus-within:ring-rose-50"><Textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about revenue, settlements, cash, risks, customers…" maxLength={600} rows={2} className="min-h-16 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0" data-testid="cfo-chat-input" /><div className="flex items-center justify-between gap-3 px-2 pb-1"><p className="text-[10px] text-slate-400" data-testid="cfo-chat-input-note">Financial context is selected on the server</p><Button type="submit" disabled={question.trim().length < 3 || chat.isPending} className="bg-rose-600 text-white hover:bg-rose-700" data-testid="cfo-chat-submit-button">{chat.isPending ? "Analyzing…" : "Ask CFO"}<Send size={14} /></Button></div></div></form>
         </div>
       </section>
       <WhyMetricSheet metricId={whyMetric} open={Boolean(whyMetric)} onOpenChange={(open) => { if (!open) setWhyMetric(null); }} />

@@ -168,7 +168,7 @@ export default function AppShell() {
             <button type="button" onClick={() => setMobileOpen(true)} className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 lg:hidden" aria-label="Open navigation" data-testid="mobile-navigation-button"><Menu size={17} /></button>
             <div>
               <p className="text-xs font-medium text-slate-400" data-testid="header-breadcrumb">Workspace / Finance intelligence</p>
-              <p className="font-heading text-sm font-semibold text-slate-800" data-testid="header-account-name">Northstar Commerce Pvt Ltd</p>
+              <p className="font-heading text-sm font-semibold text-slate-800" data-testid="header-account-name">{profile.company}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

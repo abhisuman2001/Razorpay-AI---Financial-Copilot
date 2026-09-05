@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { Building2, Camera, CheckCircle2, Mail, MapPin, Pencil, Phone, User, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -64,12 +64,33 @@ function Field({ label, value, editValue, name, type = "text", editing, onChange
 
 function Avatar({ name, avatarUrl, editing, onUrlChange }: { name: string; avatarUrl: string; editing: boolean; onUrlChange: (url: string) => void }) {
   const initials = getInitials(name);
-  const [urlInput, setUrlInput] = useState(avatarUrl);
-  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleApply = () => {
-    onUrlChange(urlInput.trim());
-    setShowUrlInput(false);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reject non-image files
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (JPEG, PNG, WebP, etc.)");
+      return;
+    }
+
+    // 5 MB guard — base64 in localStorage can get large
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5 MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      onUrlChange(dataUrl);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset so the same file can be re-selected if needed
+    e.target.value = "";
   };
 
   return (
@@ -91,32 +112,37 @@ function Avatar({ name, avatarUrl, editing, onUrlChange }: { name: string; avata
             {initials}
           </div>
         )}
+
         {editing && (
-          <button
-            type="button"
-            onClick={() => setShowUrlInput((prev) => !prev)}
-            className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white shadow-sm transition-colors hover:bg-rose-700"
-            aria-label="Change avatar"
-            data-testid="profile-avatar-edit-button"
-          >
-            <Camera size={13} />
-          </button>
+          <>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              aria-label="Upload profile photo"
+              data-testid="profile-avatar-file-input"
+              onChange={handleFileChange}
+            />
+            {/* Camera button triggers the file picker */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white shadow-sm transition-colors hover:bg-rose-700"
+              aria-label="Upload profile photo"
+              data-testid="profile-avatar-edit-button"
+            >
+              <Camera size={13} />
+            </button>
+          </>
         )}
       </div>
 
-      {editing && showUrlInput && (
-        <div className="flex w-full max-w-xs items-center gap-2" data-testid="profile-avatar-url-input">
-          <input
-            type="url"
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            placeholder="Paste image URL…"
-            className="h-9 flex-1 rounded-md border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-rose-400"
-          />
-          <Button type="button" size="sm" onClick={handleApply} className="bg-rose-600 text-white hover:bg-rose-700 h-9 text-xs px-3">
-            Apply
-          </Button>
-        </div>
+      {editing && (
+        <p className="text-[11px] text-slate-400">
+          Click the camera icon to upload a photo · Max 5 MB
+        </p>
       )}
     </div>
   );
