@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { NavLink, Outlet } from "react-router-dom";
-import { Activity, Bot, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, DatabaseZap, LayoutDashboard, ListChecks, LoaderCircle, LogOut, Menu, Monitor, Moon, Presentation, RefreshCw, Sun } from "lucide-react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Activity, Bot, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, DatabaseZap, LayoutDashboard, ListChecks, LoaderCircle, LogOut, Menu, Monitor, Moon, Presentation, RefreshCw, Sun, UserCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Toaster } from "@/components/ui/sonner";
 import { apiGet, apiPost } from "@/lib/api";
 import type { DashboardResponse, DemoScenarioActivation, DemoScenarioList } from "@/lib/types";
+import { getInitials, useUserProfile } from "@/lib/userProfile";
 
 const navItems = [
   { to: "/", label: "Overview", icon: LayoutDashboard },
@@ -53,6 +54,9 @@ export default function AppShell() {
   const [themePreference, setThemePreference] = useState<ThemePreference>(initialThemePreference);
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(initialResolvedTheme);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { profile } = useUserProfile();
+  const initials = getInitials(profile.name);
 
   useEffect(() => {
     const deviceTheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -112,12 +116,13 @@ export default function AppShell() {
   return (
     <div className="min-h-screen bg-[#f8f9fb] text-slate-900">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[250px] border-r border-slate-200 bg-white lg:flex lg:flex-col">
-        <div className="flex h-[72px] items-center gap-3 border-b border-slate-100 px-6" data-testid="sidebar-brand">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-rose-600 text-lg font-bold text-white shadow-sm">R</div>
-          <div>
-            <p className="font-heading text-sm font-bold tracking-tight" data-testid="sidebar-product-name">Razorpay AI</p>
-            <p className="text-[11px] text-slate-400" data-testid="sidebar-product-type">Financial Copilot</p>
-          </div>
+        <div className="flex h-[72px] items-center border-b border-slate-100 px-4" data-testid="sidebar-brand">
+          <img
+            src="/logo.png"
+            alt="Razorpay AI Financial Copilot"
+            className="h-20 w-auto max-w-[250px] object-contain"
+            data-testid="sidebar-logo"
+          />
         </div>
 
         <div className="flex-1 px-4 py-7">
@@ -143,10 +148,14 @@ export default function AppShell() {
 
         <div className="border-t border-slate-100 p-4">
           <div className="flex items-center gap-3 rounded-md p-2" data-testid="sidebar-user-profile">
-            <img src="https://images.pexels.com/photos/27086922/pexels-photo-27086922.jpeg" alt="Aarav Mehta" className="h-8 w-8 rounded-full object-cover" />
+            {profile.avatarUrl ? (
+              <img src={profile.avatarUrl} alt={profile.name} className="h-8 w-8 rounded-full object-cover" />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-700">{initials}</div>
+            )}
             <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-slate-800" data-testid="profile-name">Aarav Mehta</p>
-              <p className="truncate text-[11px] text-slate-400" data-testid="profile-role">Finance lead</p>
+              <p className="truncate text-xs font-semibold text-slate-800" data-testid="profile-name">{profile.name}</p>
+              <p className="truncate text-[11px] text-slate-400" data-testid="profile-role">{profile.role}</p>
             </div>
             <CircleHelp size={15} className="ml-auto text-slate-400" />
           </div>
@@ -174,18 +183,33 @@ export default function AppShell() {
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-700 transition-[transform,background-color] hover:scale-105 hover:bg-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-700 transition-[transform,background-color] hover:scale-105 hover:bg-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 overflow-hidden"
                 aria-label="Open account and theme menu"
                 data-testid="header-account-menu-button"
               >
-                AM
+                {profile.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt={profile.name} className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  initials
+                )}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={8} className="w-56 p-1.5" data-testid="header-account-menu">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="px-2 py-2" data-testid="header-account-menu-profile">
-                    <span className="block text-xs font-bold text-slate-800" data-testid="header-account-menu-name">Aarav Mehta</span>
-                    <span className="mt-0.5 block text-[10px] font-normal text-slate-400" data-testid="header-account-menu-role">Finance lead · Demo workspace</span>
+                    <span className="block text-xs font-bold text-slate-800" data-testid="header-account-menu-name">{profile.name}</span>
+                    <span className="mt-0.5 block text-[10px] font-normal text-slate-400" data-testid="header-account-menu-role">{profile.role} · Demo workspace</span>
                   </DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => navigate("/profile")}
+                    className="min-h-9 cursor-pointer px-2 py-2"
+                    data-testid="header-view-profile-button"
+                  >
+                    <UserCircle className="text-slate-500" />
+                    <span className="font-medium">View profile</span>
+                  </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
@@ -227,7 +251,12 @@ export default function AppShell() {
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="w-[290px] p-0" data-testid="mobile-navigation-panel">
-          <SheetHeader className="border-b border-slate-100 p-5 text-left"><SheetTitle className="font-heading text-base" data-testid="mobile-navigation-title">Razorpay AI</SheetTitle><SheetDescription data-testid="mobile-navigation-description">Financial Copilot workspace</SheetDescription></SheetHeader>
+          <SheetHeader className="border-b border-slate-100 p-5 text-left">
+            <SheetTitle data-testid="mobile-navigation-title">
+              <img src="/logo.png" alt="Razorpay AI Financial Copilot" className="h-8 w-auto object-contain" />
+            </SheetTitle>
+            <SheetDescription data-testid="mobile-navigation-description">Financial Copilot workspace</SheetDescription>
+          </SheetHeader>
           <nav className="space-y-1 p-4" aria-label="Mobile navigation" data-testid="mobile-primary-navigation">{navItems.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"} onClick={() => setMobileOpen(false)} className={navClass} data-testid={`mobile-nav-${label.toLowerCase().replaceAll(" ", "-")}`}><Icon size={17} /><span>{label}</span><ChevronRight size={14} className="ml-auto" /></NavLink>)}</nav>
         </SheetContent>
       </Sheet>

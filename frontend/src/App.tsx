@@ -5,6 +5,7 @@ import Reconciliation from "@/pages/Reconciliation";
 import Forecast from "@/pages/Forecast";
 import Cfo from "@/pages/Cfo";
 import Connect from "@/pages/Connect";
+import Profile from "@/pages/Profile";
 
 // One <Route> per page in src/pages; BrowserRouter already wraps this in main.tsx.
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="forecast" element={<Forecast />} />
         <Route path="cfo" element={<Cfo />} />
         <Route path="connect" element={<Connect />} />
+        <Route path="profile" element={<Profile />} />
       </Route>
     </Routes>
   );
