@@ -12,6 +12,14 @@ import { apiGet } from "@/lib/api";
 import { formatDate, formatPaiseINR } from "@/lib/format";
 import type { DailyInsight, ExecutiveDashboardResponse, ExecutiveMetric } from "@/lib/types";
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 17) return "Good afternoon";
+  if (hour >= 17 && hour < 21) return "Good evening";
+  return "Good night";
+}
+
 interface ChartPoint {
   date: string;
   actual_balance: number | null;
@@ -44,7 +52,7 @@ export default function Home() {
       <section className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-7 sm:flex-row sm:items-end" data-testid="executive-header">
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-rose-600" data-testid="overview-eyebrow">Executive overview</p>
-          <h1 className="font-heading text-3xl font-bold tracking-[-0.04em] text-slate-950 sm:text-4xl" data-testid="overview-title">Good morning</h1>
+          <h1 className="font-heading text-3xl font-bold tracking-[-0.04em] text-slate-950 sm:text-4xl" data-testid="overview-title">{getGreeting()}</h1>
           <p className="mt-2 font-heading text-lg font-medium text-slate-500 sm:text-xl" data-testid="overview-subtitle">Here's what needs your attention.</p>
         </div>
         <div className="text-left sm:text-right"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400" data-testid="overview-data-label">Reconcile → Predict → Decide</p><p className="mt-1 font-mono text-xs font-medium text-slate-700" data-testid="overview-data-date">{data ? `Data as of ${formatDate(data.as_of_date)}` : "Loading financial context…"}</p></div>
