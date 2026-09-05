@@ -6,6 +6,7 @@ import { Activity, Bot, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, Da
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { SidebarLogo } from "@/components/SidebarLogo";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -117,12 +118,7 @@ export default function AppShell() {
     <div className="min-h-screen bg-[#f8f9fb] text-slate-900">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[250px] border-r border-slate-200 bg-white lg:flex lg:flex-col">
         <div className="flex h-[72px] items-center border-b border-slate-100 px-4" data-testid="sidebar-brand">
-          <img
-            src="/logo.png"
-            alt="Razorpay AI Financial Copilot"
-            className="h-20 w-auto max-w-[250px] object-contain"
-            data-testid="sidebar-logo"
-          />
+          <SidebarLogo />
         </div>
 
         <div className="flex-1 px-4 py-7">
@@ -253,7 +249,7 @@ export default function AppShell() {
         <SheetContent side="left" className="w-[290px] p-0" data-testid="mobile-navigation-panel">
           <SheetHeader className="border-b border-slate-100 p-5 text-left">
             <SheetTitle data-testid="mobile-navigation-title">
-              <img src="/logo.png" alt="Razorpay AI Financial Copilot" className="h-8 w-auto object-contain" />
+              <SidebarLogo />
             </SheetTitle>
             <SheetDescription data-testid="mobile-navigation-description">Financial Copilot workspace</SheetDescription>
           </SheetHeader>

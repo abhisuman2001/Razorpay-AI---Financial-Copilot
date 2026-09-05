@@ -7,8 +7,8 @@ interface ForecastExplanationProps {
 
 export default function ForecastExplanationCard({ explanation }: ForecastExplanationProps) {
   const impactIcons = {
-    positive: <ArrowDown className="text-emerald-600" size={14} />,
-    negative: <ArrowUp className="text-rose-600" size={14} />,
+    positive: <ArrowUp className="text-emerald-600" size={14} />,
+    negative: <ArrowDown className="text-rose-600" size={14} />,
     neutral: <Info className="text-slate-400" size={14} />,
   };
 

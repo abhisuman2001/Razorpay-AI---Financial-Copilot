@@ -15,8 +15,8 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { SidebarLogo } from "@/components/SidebarLogo";
 import { beginSession } from "@/lib/session";
 import { apiPost } from "@/lib/api";
 import { Toaster } from "@/components/ui/sonner";
@@ -112,13 +112,7 @@ export default function Landing() {
       {/* ── Nav ─────────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-          <div className="flex items-center gap-2">
-            <img
-              src="/logo.png"
-              alt="Razorpay FinSight"
-              className="h-20 w-auto object-contain"
-            />
-          </div>
+          <SidebarLogo />
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -297,9 +291,7 @@ export default function Landing() {
       {/* ── Trust footer ─────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-200 bg-white px-5 py-10 sm:px-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 text-xs text-slate-400 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Razorpay FinSight" className="h-15 w-auto opacity-70" />
-          </div>
+          <SidebarLogo />
           <div className="flex flex-wrap items-center justify-center gap-5">
             {[
               { icon: Shield, text: "httpOnly session cookies" },
