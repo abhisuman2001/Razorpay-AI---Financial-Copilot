@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { apiGet, apiPost } from "@/lib/api";
+import { endSession } from "@/lib/session";
 import type { DashboardResponse, DemoScenarioActivation, DemoScenarioList } from "@/lib/types";
 import { getInitials, useUserProfile } from "@/lib/userProfile";
 
@@ -107,10 +108,9 @@ export default function AppShell() {
     await queryClient.invalidateQueries({ queryKey: ["cfo"] });
     await queryClient.invalidateQueries({ queryKey: ["why"] });
   };
-  const logoutDemoSession = () => {
-    toast.success("Demo session ended", {
-      description: "This prototype has no sign-in yet, so the financial workspace remains accessible.",
-    });
+  const handleLogout = () => {
+    // Clears React Query cache, invalidates session cookie, redirects to /landing.
+    void endSession("/landing");
   };
 
   return (
@@ -233,7 +233,7 @@ export default function AppShell() {
                   ))}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logoutDemoSession} className="min-h-10 cursor-pointer px-2 py-2 text-rose-700 focus:bg-rose-50 focus:text-rose-700" data-testid="header-logout-button">
+                <DropdownMenuItem onClick={handleLogout} className="min-h-10 cursor-pointer px-2 py-2 text-rose-700 focus:bg-rose-50 focus:text-rose-700" data-testid="header-logout-button">
                   <LogOut />
                   <span className="font-medium" data-testid="header-logout-label">Logout</span>
                 </DropdownMenuItem>
